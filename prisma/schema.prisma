@@ -1,0 +1,531 @@
+// This is your Prisma schema file,
+// 24online VPN Server - PKI Management Platform for strongSwan 6.0.1
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MANAGEMENT
+// ============================================
+
+model AdminUser {
+  id            String   @id @default(cuid())
+  username      String   @unique
+  email         String   @unique
+  passwordHash  String
+  role          AdminRole @default(ADMIN)
+  status        AdminStatus @default(ACTIVE)
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret String?
+  lastLoginAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  auditLogs     AuditLog[]
+
+  @@index([username])
+  @@index([email])
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  OPERATOR
+  VIEWER
+}
+
+enum AdminStatus {
+  ACTIVE
+  DISABLED
+  LOCKED
+}
+
+// ============================================
+// VPN USER & CERTIFICATES
+// ============================================
+
+model VpnUser {
+  id            String   @id @default(cuid())
+  username      String   @unique
+  email         String?
+  fullName      String?
+  department    String?
+  phone         String?
+  notes         String?
+  status        VpnUserStatus @default(ACTIVE)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  certificates  Certificate[]
+
+  @@index([username])
+  @@index([status])
+}
+
+enum VpnUserStatus {
+  ACTIVE
+  DISABLED
+  SUSPENDED
+}
+
+model Certificate {
+  id              String   @id @default(cuid())
+  userId          String
+  user            VpnUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serialNumber    String   @unique
+  commonName      String
+  subject         String
+  issuer          String
+  issueDate       DateTime
+  expiryDate      DateTime
+  status          CertificateStatus @default(ACTIVE)
+  certificatePath String?
+  pfxPath         String?
+  pfxPassword     String?
+  keySize         Int      @default(4096)
+  signatureAlgorithm String @default("SHA256")
+  certificateType CertificateType @default(CLIENT)
+  ekus            String
+  san             String?
+  revocation      Revocation?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([serialNumber])
+  @@index([userId])
+  @@index([status])
+  @@index([expiryDate])
+}
+
+enum CertificateStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+  PENDING
+}
+
+enum CertificateType {
+  ROOT_CA
+  INTERMEDIATE_CA
+  SERVER
+  CLIENT
+}
+
+// ============================================
+// PKI & CA MANAGEMENT
+// ============================================
+
+model CertificateAuthority {
+  id                    String   @id @default(cuid())
+  name                  String
+  type                  CAType
+  status                CAStatus @default(ACTIVE)
+  isDefault             Boolean  @default(false)
+  
+  // For External CA Mode
+  isExternal            Boolean  @default(false)
+  crlUrl                String?
+  crlLastFetch          DateTime?
+  crlNextFetch          DateTime?
+  
+  // For Managed CA Mode
+  keyPath               String?
+  certificatePath       String?
+  chainPath             String?
+  crlPath               String?
+  
+  // CA Details
+  subject               String?
+  serialNumber          String?
+  issueDate             DateTime?
+  expiryDate            DateTime?
+  keySize               Int?
+  
+  // Policy Settings
+  defaultValidityDays   Int      @default(365)
+  crlValidityDays       Int      @default(7)
+  
+  // Relations
+  crlInfo               CrlInfo?
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([type])
+  @@index([isDefault])
+}
+
+enum CAType {
+  ROOT
+  INTERMEDIATE
+}
+
+enum CAStatus {
+  ACTIVE
+  DISABLED
+  EXPIRED
+  REVOKED
+}
+
+model Revocation {
+  id              String   @id @default(cuid())
+  certificateId   String   @unique
+  certificate     Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+  reason          RevocationReason
+  revokedAt       DateTime @default(now())
+  revokedBy       String
+  crlPublished    Boolean  @default(false)
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([certificateId])
+  @@index([revokedAt])
+}
+
+enum RevocationReason {
+  UNSPECIFIED
+  KEY_COMPROMISE
+  CA_COMPROMISE
+  AFFILIATION_CHANGED
+  SUPERSEDED
+  CESSATION_OF_OPERATION
+  CERTIFICATE_HOLD
+  REMOVE_FROM_CRL
+  PRIVILEGE_WITHDRAWN
+  AA_COMPROMISE
+}
+
+// ============================================
+// CRL MANAGEMENT
+// ============================================
+
+model CrlInfo {
+  id              String   @id @default(cuid())
+  caId            String   @unique
+  ca              CertificateAuthority @relation(fields: [caId], references: [id])
+  version         Int
+  thisUpdate      DateTime
+  nextUpdate      DateTime
+  revokedCount    Int      @default(0)
+  filePath        String?
+  generatedAt     DateTime @default(now())
+  publishedAt     DateTime?
+  publishedTo     String?
+  createdAt       DateTime @default(now())
+
+  @@index([caId])
+  @@index([nextUpdate])
+}
+
+// ============================================
+// SYSTEM CONFIGURATION
+// ============================================
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  category    String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+  @@index([category])
+}
+
+// PKI Configuration
+model PkiConfiguration {
+  id                        String   @id @default(cuid())
+  mode                      PkiMode  @default(MANAGED)
+  
+  // External CA Settings
+  externalRootCaPath        String?
+  externalIntermediateCaPath String?
+  externalCrlUrl            String?
+  externalCrlAutoFetch      Boolean  @default(true)
+  externalCrlFetchInterval  Int      @default(24)
+  
+  // Managed CA Settings
+  managedRootCaId           String?
+  managedIntermediateCaId   String?
+  
+  // Policy
+  minKeySize                Int      @default(4096)
+  defaultClientValidityDays Int      @default(365)
+  defaultServerValidityDays Int      @default(730)
+  crlValidityDays           Int      @default(7)
+  
+  // strongSwan Integration
+  swanctlConfigPath         String   @default("/etc/swanctl")
+  autoReloadStrongswan      Boolean  @default(true)
+  
+  // Timestamps
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+}
+
+enum PkiMode {
+  EXTERNAL
+  MANAGED
+}
+
+// ============================================
+// SERVER CERTIFICATES
+// ============================================
+
+model ServerCertificate {
+  id              String   @id @default(cuid())
+  hostname        String
+  commonName      String
+  subject         String
+  issuer          String
+  serialNumber    String   @unique
+  issueDate       DateTime
+  expiryDate      DateTime
+  status          CertificateStatus @default(ACTIVE)
+  certificatePath String?
+  keyPath         String?
+  csrPath         String?
+  isDeployed      Boolean  @default(false)
+  deployedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([hostname])
+  @@index([status])
+}
+
+// ============================================
+// AUDIT LOGGING
+// ============================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  category    AuditCategory
+  actorId     String?
+  actor       AdminUser? @relation(fields: [actorId], references: [id])
+  actorType   ActorType @default(ADMIN)
+  targetId    String?
+  targetType  String?
+  details     String?
+  ipAddress   String?
+  userAgent   String?
+  status      AuditStatus @default(SUCCESS)
+  errorMessage String?
+  createdAt   DateTime @default(now())
+
+  @@index([action])
+  @@index([category])
+  @@index([actorId])
+  @@index([targetId])
+  @@index([createdAt])
+}
+
+enum AuditCategory {
+  AUTHENTICATION
+  USER_MANAGEMENT
+  CERTIFICATE_OPERATIONS
+  PKI_MANAGEMENT
+  CA_OPERATIONS
+  REVOCATION
+  CRL_OPERATIONS
+  VPN_INTEGRATION
+  SYSTEM_CONFIG
+  ADMIN_OPERATIONS
+}
+
+enum ActorType {
+  ADMIN
+  SYSTEM
+  API
+  SCHEDULED_TASK
+}
+
+enum AuditStatus {
+  SUCCESS
+  FAILURE
+  WARNING
+}
+
+// ============================================
+// VPN CONNECTION STATUS
+// ============================================
+
+model VpnStatus {
+  id                String   @id @default(cuid())
+  serviceName       String   @default("strongswan")
+  status            VpnServiceStatus
+  uptime            Int?
+  activeConnections Int?
+  lastReload        DateTime?
+  lastReloadBy      String?
+  lastError         String?
+  checkedAt         DateTime @default(now())
+
+  @@index([checkedAt])
+}
+
+enum VpnServiceStatus {
+  RUNNING
+  STOPPED
+  ERROR
+  UNKNOWN
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id          String   @id @default(cuid())
+  type        String           // 'cert-expire', 'cert-expired', 'ca-expire', etc.
+  referenceId String?          // ID of related entity (certificate, CA, etc.)
+  title       String
+  message     String
+  severity    String           // 'info', 'warning', 'error', 'success'
+  isRead      Boolean  @default(false)
+  isDismissed Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  readAt      DateTime?
+  dismissedAt DateTime?
+
+  @@index([type])
+  @@index([isRead])
+  @@index([isDismissed])
+  @@index([createdAt])
+}
+
+// ============================================
+// SMTP CONFIGURATION
+// ============================================
+
+model SmtpConfiguration {
+  id              String   @id @default(cuid())
+  host            String
+  port            Int      @default(587)
+  username        String?
+  password        String?  // Encrypted
+  fromEmail       String
+  fromName        String   @default("VPN PKI Manager")
+  useTls          Boolean  @default(true)
+  isEnabled       Boolean  @default(false)
+  testEmailSentAt DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// BACKUP
+// ============================================
+
+model BackupRecord {
+  id          String   @id @default(cuid())
+  filename    String
+  filepath    String
+  size        Int              // in bytes
+  type        BackupType       @default(FULL)
+  status      BackupStatus     @default(COMPLETED)
+  notes       String?
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum BackupType {
+  FULL
+  CONFIGURATION
+  CERTIFICATES
+  DATABASE
+}
+
+enum BackupStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+// ============================================
+// API KEYS
+// ============================================
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  name        String
+  key         String   @unique
+  prefix      String                   // First 8 chars for display
+  permissions String                   // Comma-separated: "read,write,admin"
+  isEnabled   Boolean  @default(true)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+  @@index([isEnabled])
+  @@index([createdAt])
+}
+
+// ============================================
+// VPN CONFIGURATION
+// ============================================
+
+model VpnConfiguration {
+  id                    String   @id @default(cuid())
+  
+  // Connection Settings
+  connectionName        String   @default("ikev2-cert")
+  ikeVersion            Int      @default(2)
+  
+  // IKE Proposals (comma-separated, e.g., "aes256-sha256-modp1024")
+  ikeProposals          String   @default("aes256-sha256-modp1024")
+  
+  // ESP Proposals (comma-separated, e.g., "aes256-sha1,aes256-sha256")
+  espProposals          String   @default("aes256-sha1,aes256-sha256")
+  
+  // Local Settings
+  localAuth             String   @default("pubkey")
+  localCert             String   @default("vpn-server.pem")
+  localId               String?
+  
+  // Remote Settings
+  remoteAuth            String   @default("pubkey")
+  remoteCaId            String?
+  
+  // IP Pool Settings
+  poolName              String   @default("vpn-pool")
+  poolAddressRange      String   @default("10.70.0.0/24")
+  dnsServers            String   @default("8.8.8.8")
+  
+  // Traffic Selectors
+  localTrafficSelector  String   @default("0.0.0.0/0")
+  remoteTrafficSelector String   @default("dynamic")
+  
+  // Additional Options
+  mobike                Boolean  @default(true)
+  fragmentation         Boolean  @default(true)
+  reauthTime            Int      @default(0)
+  dpdAction             String   @default("restart")
+  startAction           String   @default("none")
+  
+  // Server Identity
+  serverHostnames       String?  // Comma-separated hostnames/IPs
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([connectionName])
+}
