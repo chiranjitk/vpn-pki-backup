@@ -6,12 +6,15 @@ import {
   generateRootCA,
   isOpenSSLAvailable,
   parseCertificate,
+  generateCRL,
 } from '@/lib/pki/openssl'
 import {
   deployCACertificate,
   deployCRL,
   reloadStrongSwan,
   removeCACertificate,
+  verifyDeployment,
+  ensureStrongSwanDirs,
 } from '@/lib/pki/strongswan'
 import {
   getPKIPaths,
@@ -52,6 +55,7 @@ export async function GET() {
     const opensslAvailable = isOpenSSLAvailable()
     const setupValidation = validatePKISetup()
     const pathStatus = getPKIPathStatus()
+    const deploymentStatus = verifyDeployment()
 
     // Check if CA files exist
     let caFilesExist = false
@@ -120,6 +124,7 @@ export async function GET() {
       },
       validation: setupValidation,
       paths: pathStatus,
+      deployment: deploymentStatus,
     })
   } catch (error) {
     console.error('Get PKI status error:', error)
@@ -191,8 +196,9 @@ async function initializeCA(data: {
   // Get PKI paths
   const paths = getPKIPaths()
 
-  // Ensure directories exist
+  // Ensure all directories exist (both PKI and strongSwan)
   ensurePKIDirectories()
+  ensureStrongSwanDirs()
 
   // Generate CA
   await generateRootCA(paths.caKeyPath, paths.caCertPath, {
@@ -232,6 +238,21 @@ async function initializeCA(data: {
     },
   })
 
+  // Generate initial CRL (empty, but must exist)
+  try {
+    await generateCRL(
+      paths.caCertPath,
+      paths.caKeyPath,
+      paths.databasePath,
+      paths.crlPath,
+      7 // 7 days validity
+    )
+    console.log('[PKI] Initial CRL generated:', paths.crlPath)
+  } catch (crlError) {
+    console.error('[PKI] Failed to generate initial CRL:', crlError)
+    // Continue - CRL is not critical for basic operation
+  }
+
   // Create CRL info
   const now = new Date()
   const nextUpdate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
@@ -246,6 +267,17 @@ async function initializeCA(data: {
       filePath: paths.crlPath,
     },
   })
+
+  // Deploy CA certificate to strongSwan
+  const caDeployResult = deployCACertificate(paths.caCertPath, 'ca')
+  console.log('[PKI] CA deployment result:', caDeployResult)
+
+  // Deploy CRL to strongSwan
+  let crlDeployResult = null
+  if (fs.existsSync(paths.crlPath)) {
+    crlDeployResult = deployCRL(paths.crlPath, 'ca')
+    console.log('[PKI] CRL deployment result:', crlDeployResult)
+  }
 
   // Create or update PKI configuration
   await db.pkiConfiguration.upsert({
@@ -273,6 +305,8 @@ async function initializeCA(data: {
         name: ca.name,
         keySize: ca.keySize,
         subject: ca.subject,
+        caDeployed: caDeployResult.success,
+        crlDeployed: crlDeployResult?.success,
       }),
       status: 'SUCCESS',
     },
@@ -285,6 +319,10 @@ async function initializeCA(data: {
       name: ca.name,
       subject: ca.subject,
       expiryDate: ca.expiryDate,
+    },
+    deployment: {
+      ca: caDeployResult,
+      crl: crlDeployResult,
     },
   })
 }
@@ -305,8 +343,6 @@ async function regenerateCRL() {
   const paths = getPKIPaths()
 
   // Generate CRL using OpenSSL
-  const { generateCRL } = await import('@/lib/pki/openssl')
-
   await generateCRL(
     ca.certificatePath,
     ca.keyPath,
@@ -338,6 +374,9 @@ async function regenerateCRL() {
     },
   })
 
+  // Deploy CRL to strongSwan
+  const crlDeployResult = deployCRL(paths.crlPath, 'ca')
+
   // Log audit
   await db.auditLog.create({
     data: {
@@ -345,7 +384,10 @@ async function regenerateCRL() {
       category: 'CRL_OPERATIONS',
       actorType: 'ADMIN',
       targetType: 'CrlInfo',
-      details: JSON.stringify({ revokedCount }),
+      details: JSON.stringify({ 
+        revokedCount,
+        deployed: crlDeployResult.success,
+      }),
       status: 'SUCCESS',
     },
   })
@@ -357,6 +399,7 @@ async function regenerateCRL() {
       nextUpdate,
       revokedCount,
     },
+    deployment: crlDeployResult,
   })
 }
 
@@ -380,15 +423,28 @@ async function deployToStrongSwan() {
     )
   }
 
-  // Deploy CA certificate
-  const caDest = deployCACertificate(ca.certificatePath, 'ca')
+  // Ensure strongSwan directories exist
+  ensureStrongSwanDirs()
+
+  // Deploy CA certificate to x509ca directory
+  const caDeployResult = deployCACertificate(ca.certificatePath, 'ca')
+
+  if (!caDeployResult.success) {
+    return NextResponse.json(
+      { error: `Failed to deploy CA: ${caDeployResult.error}` },
+      { status: 500 }
+    )
+  }
 
   // Deploy CRL if exists
-  let crlDest = null
+  let crlDeployResult = null
   const paths = getPKIPaths()
   if (fs.existsSync(paths.crlPath)) {
-    crlDest = deployCRL(paths.crlPath, 'ca')
+    crlDeployResult = deployCRL(paths.crlPath, 'ca')
   }
+
+  // Verify deployment
+  const deploymentStatus = verifyDeployment()
 
   // Reload strongSwan
   const reloadResult = await reloadStrongSwan()
@@ -402,9 +458,10 @@ async function deployToStrongSwan() {
       targetType: 'CertificateAuthority',
       targetId: ca.id,
       details: JSON.stringify({
-        caDest,
-        crlDest,
+        caDest: caDeployResult.destPath,
+        crlDest: crlDeployResult?.destPath,
         reloadSuccess: reloadResult.success,
+        deploymentStatus,
       }),
       status: reloadResult.success ? 'SUCCESS' : 'FAILURE',
       errorMessage: reloadResult.success ? null : reloadResult.message,
@@ -414,9 +471,10 @@ async function deployToStrongSwan() {
   return NextResponse.json({
     success: true,
     deployed: {
-      caCertificate: caDest,
-      crl: crlDest,
+      caCertificate: caDeployResult.destPath,
+      crl: crlDeployResult?.destPath,
     },
+    verification: deploymentStatus,
     reload: reloadResult,
   })
 }

@@ -2,21 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import * as fs from 'fs'
 import * as path from 'path'
-import {
-  generateClientCertificate,
-  createPKCS12,
-  parseCertificate,
-  getCertificateSerial,
-  isOpenSSLAvailable,
-} from '@/lib/pki/openssl'
+import { execSync } from 'child_process'
+import { randomBytes } from 'crypto'
 import {
   getPKIPaths,
   ensurePKIDirectories,
-  initializeCADatabase,
-  createCAConfig,
 } from '@/lib/pki/config'
-import { deployCRL, reloadStrongSwan } from '@/lib/pki/strongswan'
-import { randomBytes } from 'crypto'
+import { 
+  ensureStrongSwanDirs,
+  reloadStrongSwan,
+  STRONGSWAN_PATHS,
+} from '@/lib/pki/strongswan'
+
+/**
+ * Client Certificate Generation API
+ * Uses strongSwan pki tool for certificate operations
+ * 
+ * Flow:
+ * 1. Generate private key: pki --gen --type rsa --size 4096
+ * 2. Extract public key: pki --pub --in <key>
+ * 3. Issue certificate: pki --issue --cacert <ca> --cakey <cakey> --dn <dn> --flag clientAuth
+ * 4. Export PKCS#12: openssl pkcs12 -export -inkey <key> -in <cert> -certfile <ca> -out <p12>
+ */
 
 // GET - List all certificates or download user certificates
 export async function GET(request: NextRequest) {
@@ -120,6 +127,18 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
+    // Get available CAs for selection
+    const cas = await db.certificateAuthority.findMany({
+      where: { status: 'ACTIVE' },
+      select: {
+        id: true,
+        name: true,
+        subject: true,
+        isDefault: true,
+        isExternal: true,
+      },
+    })
+
     // Get stats
     const stats = await db.certificate.groupBy({
       by: ['status'],
@@ -144,6 +163,7 @@ export async function GET(request: NextRequest) {
         revocation: cert.revocation,
         createdAt: cert.createdAt,
       })),
+      cas: cas,
       stats: {
         total: certificates.length,
         active: stats.find(s => s.status === 'ACTIVE')?._count || 0,
@@ -161,19 +181,28 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Generate a new certificate
+// POST - Generate a new client certificate
 export async function POST(request: NextRequest) {
   try {
-    // Check if OpenSSL is available
-    if (!isOpenSSLAvailable()) {
+    // Check if pki tool is available
+    try {
+      execSync('which pki', { encoding: 'utf-8' })
+    } catch {
       return NextResponse.json(
-        { error: 'OpenSSL is not available on this server' },
+        { error: 'strongSwan pki tool is not available. Please install strongswan-pki package.' },
         { status: 500 }
       )
     }
 
     const body = await request.json()
-    const { userId, validityDays, keySize, generatePfx, pfxPassword } = body
+    const { 
+      userId, 
+      validityDays, 
+      keySize, 
+      generatePfx, 
+      pfxPassword,
+      caId,        // CA to use for signing
+    } = body
 
     if (!userId) {
       return NextResponse.json(
@@ -199,21 +228,33 @@ export async function POST(request: NextRequest) {
     const days = validityDays || config?.defaultClientValidityDays || 365
     const size = keySize || config?.minKeySize || 4096
 
-    // Get PKI paths
-    const paths = getPKIPaths()
-
-    // Get CA (managed mode)
-    const ca = await db.certificateAuthority.findFirst({
-      where: {
-        isDefault: true,
-        status: 'ACTIVE',
-        isExternal: false,
-      },
-    })
+    // Get specified CA or default
+    let ca
+    if (caId) {
+      ca = await db.certificateAuthority.findUnique({
+        where: { id: caId, status: 'ACTIVE' },
+      })
+    } else {
+      ca = await db.certificateAuthority.findFirst({
+        where: {
+          isDefault: true,
+          status: 'ACTIVE',
+          isExternal: false,
+        },
+      })
+    }
 
     if (!ca || !ca.keyPath || !ca.certificatePath) {
       return NextResponse.json(
         { error: 'No active Certificate Authority found. Please initialize CA first in PKI Management.' },
+        { status: 400 }
+      )
+    }
+
+    // For external CA, we can't sign certificates
+    if (ca.isExternal) {
+      return NextResponse.json(
+        { error: 'Cannot sign certificates with External CA. Use CSR export instead.' },
         { status: 400 }
       )
     }
@@ -228,70 +269,132 @@ export async function POST(request: NextRequest) {
 
     // Ensure directories exist
     ensurePKIDirectories()
+    ensureStrongSwanDirs()
+
+    // Common Name - use fullName or username (NOT email)
+    const commonName = user.fullName || user.username
 
     // Generate unique filename using username and timestamp
     const certName = `${user.username}_${Date.now()}`
-    const keyPath = path.join(paths.clientKeysPath, `${certName}.key`)
-    const certPath = path.join(paths.clientCertsPath, `${certName}.pem`)
-    const pfxPath = path.join(paths.clientPkcs12Path, `${certName}.p12`)
+    const keyPath = path.join(STRONGSWAN_PATHS.privateDir, `${certName}.key`)
+    const certPath = path.join(STRONGSWAN_PATHS.x509Dir, `${certName}.pem`)
+    const pfxPath = path.join(STRONGSWAN_PATHS.swanctlDir, 'pkcs12', `${certName}.p12`)
 
-    // Generate certificate
-    // IMPORTANT: Common Name (CN) should be user's name or username, NOT email
-    // Email goes in the emailAddress field for proper X.509 certificate structure
-    const commonName = user.fullName || user.username
-    
-    await generateClientCertificate(
-      ca.keyPath,
-      ca.certificatePath,
-      keyPath,
-      certPath,
-      {
-        commonName: commonName,
-        emailAddress: user.email || '',
-        organization: '24online VPN',
-        keySize: size,
-        validityDays: days,
-      }
+    // Ensure pkcs12 directory exists
+    const pkcs12Dir = path.join(STRONGSWAN_PATHS.swanctlDir, 'pkcs12')
+    if (!fs.existsSync(pkcs12Dir)) {
+      fs.mkdirSync(pkcs12Dir, { recursive: true, mode: 0o755 })
+    }
+
+    console.log(`[PKI] Generating client certificate for: ${commonName}`)
+    console.log(`[PKI] Using CA: ${ca.name} (${ca.subject})`)
+
+    // Step 1: Generate private key using pki tool
+    console.log('[PKI] Step 1: Generating private key...')
+    execSync(
+      `pki --gen --type rsa --size ${size} --outform pem`,
+      { encoding: 'utf-8', stdio: ['pipe', fs.openSync(keyPath, 'w'), 'pipe'] }
     )
+    fs.chmodSync(keyPath, 0o600)
+    console.log(`[PKI] Private key saved to: ${keyPath}`)
+
+    // Step 2: Build DN with optional email
+    let dn = `CN=${commonName}`
+    if (user.email) {
+      dn += `, E=${user.email}`
+    }
+    
+    // Step 3: Issue client certificate using pki tool
+    console.log('[PKI] Step 2: Generating and signing certificate...')
+    
+    const issueCmd = `pki --pub --in ${keyPath} | pki --issue ` +
+      `--cacert ${ca.certificatePath} ` +
+      `--cakey ${ca.keyPath} ` +
+      `--dn "${dn}" ` +
+      `--flag clientAuth ` +
+      `--lifetime ${days} ` +
+      `--outform pem`
+    
+    console.log(`[PKI] Running: ${issueCmd}`)
+    
+    try {
+      const certOutput = execSync(issueCmd, { encoding: 'utf-8' })
+      fs.writeFileSync(certPath, certOutput, { mode: 0o644 })
+      console.log(`[PKI] Certificate saved to: ${certPath}`)
+    } catch (issueError) {
+      console.error('[PKI] Certificate issuance failed:', issueError)
+      throw new Error(`Failed to issue certificate: ${issueError}`)
+    }
 
     // Get certificate details
-    const certInfo = await parseCertificate(certPath)
-    const serialNumber = await getCertificateSerial(certPath)
+    let serialNumber = ''
+    let certSubject = dn
+    let certIssuer = ca.subject || ''
+    let notBefore = new Date()
+    let notAfter = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+    
+    try {
+      const printOutput = execSync(`pki --print --in ${certPath}`, { encoding: 'utf-8' })
+      
+      const subjectMatch = printOutput.match(/subject:\s*"([^"]+)"/)
+      const issuerMatch = printOutput.match(/issuer:\s*"([^"]+)"/)
+      const serialMatch = printOutput.match(/serial:\s*([a-fA-F0-9:]+)/)
+      const notBeforeMatch = printOutput.match(/not before\s*([^,]+),/)
+      const notAfterMatch = printOutput.match(/not after\s*([^,]+),/)
+      
+      if (subjectMatch) certSubject = subjectMatch[1]
+      if (issuerMatch) certIssuer = issuerMatch[1]
+      if (serialMatch) serialNumber = serialMatch[1].replace(/:/g, '')
+      if (notBeforeMatch) notBefore = new Date(notBeforeMatch[1].trim())
+      if (notAfterMatch) notAfter = new Date(notAfterMatch[1].trim())
+      
+      console.log('[PKI] Certificate info:', { serialNumber, certSubject, certIssuer })
+    } catch (printError) {
+      console.error('[PKI] Failed to parse certificate:', printError)
+    }
 
-    // Generate PKCS#12 bundle
+    // Generate PKCS#12 bundle using openssl
     let pfxGenerated = false
     const pfxPass = pfxPassword || randomBytes(8).toString('base64')
 
     if (generatePfx !== false) {
-      await createPKCS12({
-        certificatePath: certPath,
-        keyPath: keyPath,
-        outputPath: pfxPath,
-        password: pfxPass,
-        friendlyName: user.username,
-        caChainPath: ca.certificatePath,
-      })
-      pfxGenerated = true
+      console.log('[PKI] Step 3: Generating PKCS#12 bundle...')
+      
+      try {
+        const pkcs12Cmd = `openssl pkcs12 -export ` +
+          `-inkey ${keyPath} ` +
+          `-in ${certPath} ` +
+          `-certfile ${ca.certificatePath} ` +
+          `-out ${pfxPath} ` +
+          `-passout pass:${pfxPass}`
+        
+        execSync(pkcs12Cmd, { encoding: 'utf-8' })
+        pfxGenerated = true
+        console.log(`[PKI] PKCS#12 saved to: ${pfxPath}`)
+      } catch (pkcs12Error) {
+        console.error('[PKI] PKCS#12 generation failed:', pkcs12Error)
+        // Continue without PKCS#12
+      }
     }
 
     // Create certificate record in database
     const certificate = await db.certificate.create({
       data: {
         userId,
-        serialNumber,
+        serialNumber: serialNumber || `client_${Date.now()}`,
         commonName: commonName,
-        subject: certInfo.subject,
-        issuer: certInfo.issuer,
-        issueDate: certInfo.notBefore,
-        expiryDate: certInfo.notAfter,
+        subject: certSubject,
+        issuer: certIssuer,
+        issueDate: notBefore,
+        expiryDate: notAfter,
         status: 'ACTIVE',
         certificatePath: certPath,
         pfxPath: pfxGenerated ? pfxPath : null,
         pfxPassword: pfxGenerated ? pfxPass : null,
         keySize: size,
-        signatureAlgorithm: certInfo.signatureAlgorithm,
+        signatureAlgorithm: 'SHA256',
         certificateType: 'CLIENT',
-        ekus: certInfo.extendedKeyUsage.join(','),
+        ekus: 'clientAuth',
       },
     })
 
@@ -305,9 +408,13 @@ export async function POST(request: NextRequest) {
         targetType: 'Certificate',
         details: JSON.stringify({
           username: user.username,
+          commonName,
+          caId: ca.id,
+          caName: ca.name,
           serialNumber,
           validityDays: days,
           keySize: size,
+          pfxGenerated,
         }),
         status: 'SUCCESS',
       },
@@ -318,20 +425,28 @@ export async function POST(request: NextRequest) {
       try {
         await reloadStrongSwan()
       } catch (e) {
-        console.error('Failed to reload strongSwan:', e)
+        console.error('[PKI] Failed to reload strongSwan:', e)
       }
     }
 
     return NextResponse.json({
+      success: true,
       certificate: {
         id: certificate.id,
         serialNumber: certificate.serialNumber,
         commonName: certificate.commonName,
+        subject: certificate.subject,
+        issuer: certificate.issuer,
         issueDate: certificate.issueDate,
         expiryDate: certificate.expiryDate,
         status: certificate.status,
         keySize: certificate.keySize,
         pfxPassword: pfxGenerated ? pfxPass : null,
+      },
+      paths: {
+        key: keyPath,
+        cert: certPath,
+        pfx: pfxGenerated ? pfxPath : null,
       },
       download: {
         pem: `/api/certificates/${certificate.id}/download?format=pem`,
