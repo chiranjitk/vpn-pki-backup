@@ -1,0 +1,1509 @@
+// This is your Prisma schema file,
+// 24online VPN Server - PKI Management Platform for strongSwan 6.0.1
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MANAGEMENT
+// ============================================
+
+model AdminUser {
+  id            String   @id @default(cuid())
+  username      String   @unique
+  email         String   @unique
+  passwordHash  String
+  role          AdminRole @default(ADMIN)
+  status        AdminStatus @default(ACTIVE)
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret String?
+  lastLoginAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  auditLogs     AuditLog[]
+
+  @@index([username])
+  @@index([email])
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  OPERATOR
+  VIEWER
+}
+
+enum AdminStatus {
+  ACTIVE
+  DISABLED
+  LOCKED
+}
+
+// ============================================
+// VPN USER & CERTIFICATES
+// ============================================
+
+model VpnUser {
+  id            String   @id @default(cuid())
+  username      String   @unique
+  email         String?
+  fullName      String?
+  department    String?
+  phone         String?
+  notes         String?
+  status        VpnUserStatus @default(ACTIVE)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  certificates  Certificate[]
+  mfaConfig     VpnUserMfa?
+
+  @@index([username])
+  @@index([status])
+}
+
+enum VpnUserStatus {
+  ACTIVE
+  DISABLED
+  SUSPENDED
+}
+
+model Certificate {
+  id              String   @id @default(cuid())
+  userId          String
+  user            VpnUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serialNumber    String   @unique
+  commonName      String
+  subject         String
+  issuer          String
+  issueDate       DateTime
+  expiryDate      DateTime
+  status          CertificateStatus @default(ACTIVE)
+  certificatePath String?
+  keyPath         String?  // Private key path
+  csrPath         String?  // CSR path for external signing
+  pfxPath         String?
+  pfxPassword     String?
+  keySize         Int      @default(4096)
+  signatureAlgorithm String @default("SHA256")
+  certificateType CertificateType @default(CLIENT)
+  ekus            String
+  san             String?
+  revocation      Revocation?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([serialNumber])
+  @@index([userId])
+  @@index([status])
+  @@index([expiryDate])
+}
+
+enum CertificateStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+  PENDING
+}
+
+enum CertificateType {
+  ROOT_CA
+  INTERMEDIATE_CA
+  SERVER
+  CLIENT
+}
+
+// ============================================
+// PKI & CA MANAGEMENT
+// ============================================
+
+model CertificateAuthority {
+  id                    String   @id @default(cuid())
+  name                  String
+  type                  CAType
+  status                CAStatus @default(ACTIVE)
+  isDefault             Boolean  @default(false)
+  
+  // For External CA Mode
+  isExternal            Boolean  @default(false)
+  crlUrl                String?
+  crlLastFetch          DateTime?
+  crlNextFetch          DateTime?
+  
+  // For Managed CA Mode
+  keyPath               String?
+  certificatePath       String?
+  chainPath             String?
+  crlPath               String?
+  
+  // CA Details
+  subject               String?
+  serialNumber          String?
+  issueDate             DateTime?
+  expiryDate            DateTime?
+  keySize               Int?
+  
+  // Policy Settings
+  defaultValidityDays   Int      @default(365)
+  crlValidityDays       Int      @default(7)
+  
+  // Relations
+  crlInfo               CrlInfo?
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([type])
+  @@index([isDefault])
+}
+
+enum CAType {
+  ROOT
+  INTERMEDIATE
+}
+
+enum CAStatus {
+  ACTIVE
+  DISABLED
+  EXPIRED
+  REVOKED
+}
+
+model Revocation {
+  id              String   @id @default(cuid())
+  certificateId   String   @unique
+  certificate     Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+  reason          RevocationReason
+  revokedAt       DateTime @default(now())
+  revokedBy       String
+  crlPublished    Boolean  @default(false)
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([certificateId])
+  @@index([revokedAt])
+}
+
+enum RevocationReason {
+  UNSPECIFIED
+  KEY_COMPROMISE
+  CA_COMPROMISE
+  AFFILIATION_CHANGED
+  SUPERSEDED
+  CESSATION_OF_OPERATION
+  CERTIFICATE_HOLD
+  REMOVE_FROM_CRL
+  PRIVILEGE_WITHDRAWN
+  AA_COMPROMISE
+}
+
+// ============================================
+// CRL MANAGEMENT
+// ============================================
+
+model CrlInfo {
+  id              String   @id @default(cuid())
+  caId            String   @unique
+  ca              CertificateAuthority @relation(fields: [caId], references: [id])
+  version         Int
+  thisUpdate      DateTime
+  nextUpdate      DateTime
+  revokedCount    Int      @default(0)
+  filePath        String?
+  generatedAt     DateTime @default(now())
+  publishedAt     DateTime?
+  publishedTo     String?
+  createdAt       DateTime @default(now())
+
+  @@index([caId])
+  @@index([nextUpdate])
+}
+
+// ============================================
+// SYSTEM CONFIGURATION
+// ============================================
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  category    String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+  @@index([category])
+}
+
+// PKI Configuration
+model PkiConfiguration {
+  id                        String   @id @default(cuid())
+  mode                      PkiMode  @default(MANAGED)
+  
+  // External CA Settings
+  externalRootCaPath        String?
+  externalIntermediateCaPath String?
+  externalCrlUrl            String?
+  externalCrlAutoFetch      Boolean  @default(true)
+  externalCrlFetchInterval  Int      @default(24)
+  
+  // Managed CA Settings
+  managedRootCaId           String?
+  managedIntermediateCaId   String?
+  
+  // Policy
+  minKeySize                Int      @default(4096)
+  defaultClientValidityDays Int      @default(365)
+  defaultServerValidityDays Int      @default(730)
+  crlValidityDays           Int      @default(7)
+  
+  // strongSwan Integration
+  swanctlConfigPath         String   @default("/etc/swanctl")
+  autoReloadStrongswan      Boolean  @default(true)
+  
+  // Timestamps
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+}
+
+enum PkiMode {
+  EXTERNAL
+  MANAGED
+}
+
+// ============================================
+// SERVER CERTIFICATES
+// ============================================
+
+model ServerCertificate {
+  id              String   @id @default(cuid())
+  hostname        String
+  commonName      String
+  subject         String
+  issuer          String
+  serialNumber    String   @unique
+  issueDate       DateTime
+  expiryDate      DateTime
+  status          CertificateStatus @default(ACTIVE)
+  certificatePath String?
+  keyPath         String?
+  csrPath         String?
+  isDeployed      Boolean  @default(false)
+  deployedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([hostname])
+  @@index([status])
+}
+
+// ============================================
+// AUDIT LOGGING
+// ============================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  category    AuditCategory
+  actorId     String?
+  actor       AdminUser? @relation(fields: [actorId], references: [id])
+  actorType   ActorType @default(ADMIN)
+  targetId    String?
+  targetType  String?
+  details     String?
+  ipAddress   String?
+  userAgent   String?
+  status      AuditStatus @default(SUCCESS)
+  errorMessage String?
+  createdAt   DateTime @default(now())
+
+  @@index([action])
+  @@index([category])
+  @@index([actorId])
+  @@index([targetId])
+  @@index([createdAt])
+}
+
+enum AuditCategory {
+  AUTHENTICATION
+  USER_MANAGEMENT
+  CERTIFICATE_OPERATIONS
+  PKI_MANAGEMENT
+  CA_OPERATIONS
+  REVOCATION
+  CRL_OPERATIONS
+  VPN_INTEGRATION
+  SYSTEM_CONFIG
+  ADMIN_OPERATIONS
+}
+
+enum ActorType {
+  ADMIN
+  SYSTEM
+  API
+  SCHEDULED_TASK
+}
+
+enum AuditStatus {
+  SUCCESS
+  FAILURE
+  WARNING
+}
+
+// ============================================
+// VPN CONNECTION STATUS
+// ============================================
+
+model VpnStatus {
+  id                String   @id @default(cuid())
+  serviceName       String   @default("strongswan")
+  status            VpnServiceStatus
+  uptime            Int?
+  activeConnections Int?
+  lastReload        DateTime?
+  lastReloadBy      String?
+  lastError         String?
+  checkedAt         DateTime @default(now())
+
+  @@index([checkedAt])
+}
+
+enum VpnServiceStatus {
+  RUNNING
+  STOPPED
+  ERROR
+  UNKNOWN
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id          String   @id @default(cuid())
+  type        String           // 'cert-expire', 'cert-expired', 'ca-expire', etc.
+  referenceId String?          // ID of related entity (certificate, CA, etc.)
+  title       String
+  message     String
+  severity    String           // 'info', 'warning', 'error', 'success'
+  isRead      Boolean  @default(false)
+  isDismissed Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  readAt      DateTime?
+  dismissedAt DateTime?
+
+  @@index([type])
+  @@index([isRead])
+  @@index([isDismissed])
+  @@index([createdAt])
+}
+
+// ============================================
+// SMTP CONFIGURATION
+// ============================================
+
+model SmtpConfiguration {
+  id              String   @id @default(cuid())
+  host            String
+  port            Int      @default(587)
+  username        String?
+  password        String?  // Encrypted
+  fromEmail       String
+  fromName        String   @default("VPN PKI Manager")
+  useTls          Boolean  @default(true)
+  isEnabled       Boolean  @default(false)
+  testEmailSentAt DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// BACKUP
+// ============================================
+
+model BackupRecord {
+  id          String   @id @default(cuid())
+  filename    String
+  filepath    String
+  size        Int              // in bytes
+  type        BackupType       @default(FULL)
+  status      BackupStatus     @default(COMPLETED)
+  notes       String?
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum BackupType {
+  FULL
+  CONFIGURATION
+  CERTIFICATES
+  DATABASE
+}
+
+enum BackupStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+// ============================================
+// API KEYS
+// ============================================
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  name        String
+  key         String   @unique
+  prefix      String                   // First 8 chars for display
+  permissions String                   // Comma-separated: "read,write,admin"
+  isEnabled   Boolean  @default(true)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+  @@index([isEnabled])
+  @@index([createdAt])
+}
+
+// ============================================
+// IP POOLS
+// ============================================
+
+model IpPool {
+  id                    String   @id @default(cuid())
+  name                  String   @unique
+  cidr                  String                       // e.g., 10.70.1.0/24
+  gateway               String?                      // Optional gateway IP
+  dnsServers            String?                      // Comma-separated DNS servers
+  
+  // Usage tracking
+  usedIps               Int      @default(0)
+  totalIps              Int      @default(254)        // Calculated from CIDR
+  
+  // Status
+  status                PoolStatus @default(ACTIVE)
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([name])
+  @@index([status])
+}
+
+enum PoolStatus {
+  ACTIVE
+  DISABLED
+  DEPLETED
+}
+
+// ============================================
+// CONNECTION PROFILES (VPN CONFIGURATION)
+// ============================================
+
+model ConnectionProfile {
+  id                    String   @id @default(cuid())
+  
+  // Profile Info
+  name                  String   @unique               // Unique profile name
+  description           String?
+  isDefault             Boolean  @default(false)
+  isEnabled             Boolean  @default(true)
+  
+  // Connection Settings
+  connectionName        String   @default("ikev2-cert") // Name used in swanctl.conf
+  ikeVersion            Int      @default(2)            // 1 or 2
+  
+  // IKE Proposals (comma-separated, e.g., "aes256-sha256-modp1024")
+  ikeProposals          String   @default("aes256-sha256-modp1024,aes256-sha384-modp2048,aes256gcm16-sha256-modp2048")
+  
+  // ESP Proposals (comma-separated, e.g., "aes256-sha1,aes256-sha256")
+  espProposals          String   @default("aes256-sha256,aes256gcm16-sha256")
+  
+  // Local Authentication Settings
+  localAuth             String   @default("pubkey")     // pubkey, eap, psk
+  localCert             String   @default("vpn-server.pem")
+  localId               String?
+  
+  // Remote Authentication Settings
+  remoteAuth            String   @default("pubkey")     // pubkey, eap-tls, eap-mschapv2
+  remoteCaId            String?                         // CA subject for client validation
+  remoteEapId           String?                         // EAP identity if using EAP
+  
+  // IP Pool Settings (can reference IpPool or use inline settings)
+  poolId                String?                         // Reference to IpPool
+  poolName              String   @default("vpn-pool")
+  poolAddressRange      String   @default("10.70.0.0/24")
+  dnsServers            String   @default("8.8.8.8,8.8.4.4")
+  
+  // Traffic Selectors
+  localTrafficSelector  String   @default("0.0.0.0/0")
+  remoteTrafficSelector String   @default("dynamic")
+  
+  // Additional Options
+  mobike                Boolean  @default(true)
+  fragmentation         Boolean  @default(true)
+  reauthTime            Int      @default(0)            // 0 = disabled
+  dpdTimeout            Int      @default(30)           // DPD timeout in seconds
+  dpdAction             String   @default("restart")    // none, clear, restart
+  startAction           String   @default("none")       // none, start, add, route, trap
+  
+  // Server Identity
+  serverHostnames       String?                         // Comma-separated hostnames/IPs
+  localAddrs            String?                         // Comma-separated local addresses
+  
+  // StrongSwan Integration
+  configApplied         Boolean  @default(false)
+  appliedAt             DateTime?
+  configPath            String?                         // Path to generated config file
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([name])
+  @@index([connectionName])
+  @@index([isDefault])
+  @@index([isEnabled])
+}
+
+// Legacy VpnConfiguration model - keeping for backward compatibility
+// Will be migrated to ConnectionProfile
+
+model VpnConfiguration {
+  id                    String   @id @default(cuid())
+  
+  // Connection Settings
+  connectionName        String   @default("ikev2-cert")
+  ikeVersion            Int      @default(2)
+  
+  // IKE Proposals (comma-separated, e.g., "aes256-sha256-modp1024")
+  ikeProposals          String   @default("aes256-sha256-modp1024")
+  
+  // ESP Proposals (comma-separated, e.g., "aes256-sha1,aes256-sha256")
+  espProposals          String   @default("aes256-sha1,aes256-sha256")
+  
+  // Local Settings
+  localAuth             String   @default("pubkey")
+  localCert             String   @default("vpn-server.pem")
+  localId               String?
+  
+  // Remote Settings
+  remoteAuth            String   @default("pubkey")
+  remoteCaId            String?
+  
+  // IP Pool Settings
+  poolName              String   @default("vpn-pool")
+  poolAddressRange      String   @default("10.70.0.0/24")
+  dnsServers            String   @default("8.8.8.8")
+  
+  // Traffic Selectors
+  localTrafficSelector  String   @default("0.0.0.0/0")
+  remoteTrafficSelector String   @default("dynamic")
+  
+  // Additional Options
+  mobike                Boolean  @default(true)
+  fragmentation         Boolean  @default(true)
+  reauthTime            Int      @default(0)
+  dpdAction             String   @default("restart")
+  startAction           String   @default("none")
+  
+  // Server Identity
+  serverHostnames       String?  // Comma-separated hostnames/IPs
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([connectionName])
+}
+
+// ============================================
+// RADIUS CONFIGURATION
+// ============================================
+
+model RadiusConfiguration {
+  id                    String   @id @default(cuid())
+  
+  // Connection Settings
+  host                  String
+  port                  Int      @default(1812)
+  secret                String                     // Shared secret (encrypted)
+  timeout               Int      @default(5)       // Seconds
+  
+  // Accounting (optional)
+  accountingEnabled     Boolean  @default(false)
+  accountingPort        Int      @default(1813)
+  
+  // Authentication Settings
+  isEnabled             Boolean  @default(false)
+  
+  // Test Status
+  lastTestAt            DateTime?
+  lastTestSuccess       Boolean?
+  lastTestError         String?
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([isEnabled])
+}
+
+// ============================================
+// LDAP CONFIGURATION
+// ============================================
+
+model LdapConfiguration {
+  id                    String   @id @default(cuid())
+  
+  // Connection Settings
+  serverUrl             String                     // ldap:// or ldaps://
+  bindDn                String                     // DN for binding
+  bindPassword          String                     // Password (encrypted)
+  baseDn                String                     // Base DN for searches
+  
+  // Connection Options
+  useTls                Boolean  @default(true)
+  tlsVerifyCert         Boolean  @default(true)
+  timeout               Int      @default(30)      // Seconds
+  
+  // Sync Settings
+  isEnabled             Boolean  @default(false)
+  syncInterval          Int      @default(3600)    // Seconds (1 hour default)
+  syncFilter            String   @default("(objectClass=user)")
+  syncAttributeUsername String   @default("sAMAccountName")
+  syncAttributeEmail    String   @default("mail")
+  syncAttributeFullName String   @default("displayName")
+  syncAttributeDepartment String? @default("department")
+  
+  // Sync Status
+  lastSyncAt            DateTime?
+  lastSyncSuccess       Boolean?
+  lastSyncError         String?
+  lastSyncCount         Int?
+  
+  // Auto-create users
+  autoCreateUsers       Boolean  @default(true)
+  autoDisableUsers      Boolean  @default(false)   // Disable users not in LDAP
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([isEnabled])
+}
+
+// ============================================
+// LDAP SYNC LOG
+// ============================================
+
+model LdapSyncLog {
+  id                    String   @id @default(cuid())
+  
+  // Sync Details
+  startedAt             DateTime @default(now())
+  completedAt           DateTime?
+  duration              Int?                       // Milliseconds
+  
+  // Results
+  usersFound            Int      @default(0)
+  usersCreated          Int      @default(0)
+  usersUpdated          Int      @default(0)
+  usersDisabled         Int      @default(0)
+  usersUnchanged        Int      @default(0)
+  
+  // Status
+  status                SyncStatus @default(PENDING)
+  errorMessage          String?
+  
+  // Details (JSON)
+  details               String?                    // JSON with detailed results
+
+  @@index([startedAt])
+  @@index([status])
+}
+
+enum SyncStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  PARTIAL
+}
+
+// ============================================
+// VPN USER MFA CONFIGURATION
+// ============================================
+
+model VpnUserMfa {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  user                  VpnUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // MFA Settings
+  mfaEnabled            Boolean  @default(false)
+  mfaType               MfaType  @default(TOTP)
+  mfaSecret             String?  // Encrypted TOTP secret
+  mfaBackupCodes        String?  // JSON array of encrypted backup codes
+  
+  // SMS Settings (if mfaType is SMS)
+  smsPhoneNumber        String?
+  smsVerified           Boolean  @default(false)
+  
+  // Email MFA Settings
+  emailMfaEnabled       Boolean  @default(false)
+  
+  // RADIUS MFA Settings
+  radiusMfaEnabled      Boolean  @default(false)
+  radiusMfaServer       String?
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+  @@index([mfaEnabled])
+}
+
+enum MfaType {
+  TOTP        // Time-based OTP (Google Authenticator, etc.)
+  SMS         // SMS-based OTP
+  EMAIL       // Email-based OTP
+  RADIUS      // RADIUS-based MFA (NPS, etc.)
+  PUSH        // Push notification (requires external service)
+}
+
+// ============================================
+// GEO/IP RESTRICTIONS
+// ============================================
+
+model GeoIpRestriction {
+  id                    String   @id @default(cuid())
+  
+  // Restriction Type
+  type                  RestrictionType
+  value                 String   // Country code, IP, or CIDR
+  
+  // Description
+  description           String?
+  
+  // Status
+  isEnabled             Boolean  @default(true)
+  
+  // Action (block or allow)
+  action                RestrictionAction @default(BLOCK)
+  
+  // Source (manual, geoip database, threat intelligence)
+  source                String   @default("manual")
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([type])
+  @@index([isEnabled])
+  @@index([action])
+}
+
+enum RestrictionType {
+  COUNTRY         // ISO country code (e.g., "CN", "RU")
+  IP_ADDRESS      // Single IP address
+  IP_RANGE        // CIDR notation (e.g., "192.168.1.0/24")
+  ASN             // Autonomous System Number
+}
+
+enum RestrictionAction {
+  BLOCK
+  ALLOW
+}
+
+// ============================================
+// GUEST USER MANAGEMENT
+// ============================================
+
+model GuestUser {
+  id                    String   @id @default(cuid())
+  
+  // User Info
+  username              String   @unique
+  email                 String
+  fullName              String?
+  phone                 String?
+  company               String?
+  purpose               String?  // Reason for VPN access
+  
+  // Sponsor Info (internal employee who approved)
+  sponsorId             String?
+  sponsorName           String?
+  sponsorEmail          String?
+  
+  // Access Settings
+  accessStartDate       DateTime
+  accessEndDate         DateTime
+  maxSessions           Int      @default(1)
+  
+  // Network Restrictions
+  allowedNetworks       String?  // JSON array of allowed destinations
+  bandwidthLimit        Int?     // Kbps
+  
+  // Status
+  status                GuestStatus @default(PENDING)
+  approvalDate          DateTime?
+  approvedBy            String?
+  
+  // Certificate Info
+  certificateId         String?
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  lastAccessAt          DateTime?
+  accessCount           Int      @default(0)
+
+  @@index([username])
+  @@index([status])
+  @@index([accessEndDate])
+}
+
+enum GuestStatus {
+  PENDING       // Awaiting approval
+  APPROVED      // Approved, can connect
+  ACTIVE        // Currently has active session
+  EXPIRED       // Access period ended
+  REVOKED       // Access revoked
+  DENIED        // Approval denied
+}
+
+// ============================================
+// VPN SESSION LOGGING
+// ============================================
+
+model VpnSession {
+  id                    String   @id @default(cuid())
+  
+  // Connection Info
+  sessionId             String   @unique  // Unique session identifier
+  username              String
+  userId                String?
+  
+  // Network Info
+  clientPublicIp        String
+  clientVirtualIp       String?  // Assigned VPN IP
+  serverIp              String
+  
+  // Certificate Info
+  certificateSerial     String?
+  certificateCn         String?
+  
+  // Timing
+  connectedAt           DateTime @default(now())
+  disconnectedAt        DateTime?
+  duration              Int?     // Seconds
+  
+  // Traffic Stats
+  bytesIn               Int      @default(0)
+  bytesOut              Int      @default(0)
+  
+  // Session Status
+  status                SessionStatus @default(ACTIVE)
+  disconnectReason     String?
+  
+  // Device Info
+  deviceType           String?  // windows, macos, ios, android, etc.
+  deviceOs             String?
+  clientVersion        String?
+  
+  // Location Info
+  clientCountry        String?
+  clientCity           String?
+  clientIsp            String?
+  
+  // MFA Info
+  mfaUsed              Boolean  @default(false)
+  mfaType              String?
+  
+  // Timestamps
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([sessionId])
+  @@index([username])
+  @@index([userId])
+  @@index([status])
+  @@index([connectedAt])
+  @@index([clientPublicIp])
+}
+
+enum SessionStatus {
+  ACTIVE
+  DISCONNECTED
+  TIMEOUT
+  FAILED
+  BLOCKED
+}
+
+// ============================================
+// SIEM INTEGRATION
+// ============================================
+
+model SiemConfiguration {
+  id                    String   @id @default(cuid())
+  
+  // SIEM Type
+  siemType              SiemType
+  
+  // Connection Settings
+  endpointUrl           String?
+  apiToken              String?  // Encrypted
+  apiKey                String?  // Encrypted
+  
+  // Syslog Settings (for syslog-based SIEM)
+  syslogHost            String?
+  syslogPort            Int      @default(514)
+  syslogProtocol        SyslogProtocol @default(UDP)
+  syslogFacility        Int      @default(16)  // LOCAL0
+  
+  // What to log
+  logAuthentication     Boolean  @default(true)
+  logCertificates       Boolean  @default(true)
+  logVpnSessions        Boolean  @default(true)
+  logAdminActions       Boolean  @default(true)
+  logSecurityEvents     Boolean  @default(true)
+  
+  // Log Format
+  logFormat             LogFormat @default(JSON)
+  includeRawData        Boolean  @default(false)
+  
+  // Status
+  isEnabled             Boolean  @default(false)
+  lastSyncAt            DateTime?
+  lastSyncSuccess       Boolean?
+  lastSyncError         String?
+  eventsSent            Int      @default(0)
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([isEnabled])
+  @@index([siemType])
+}
+
+enum SiemType {
+  SPLUNK
+  ELK_STACK
+  QRADAR
+  ARCSIGHT
+  SENTINEL_ONE
+  MICROSOFT_SENTINEL
+  CUSTOM_API
+  SYSLOG
+}
+
+enum SyslogProtocol {
+  UDP
+  TCP
+  TLS
+}
+
+enum LogFormat {
+  JSON
+  CEF        // Common Event Format
+  LEEF       // Log Event Extended Format
+  SYSLOG
+}
+
+// ============================================
+// SIEM EVENT LOG
+// ============================================
+
+model SiemEventLog {
+  id                    String   @id @default(cuid())
+  
+  // Event Info
+  eventType             String
+  eventCategory         String
+  severity              String
+  
+  // Event Data
+  eventData             String   // JSON
+  
+  // Status
+  sentAt                DateTime?
+  sendStatus            SendStatus @default(PENDING)
+  sendAttempts          Int      @default(0)
+  errorMessage          String?
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+
+  @@index([eventType])
+  @@index([sendStatus])
+  @@index([createdAt])
+}
+
+enum SendStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// ============================================
+// FIREWALL INTEGRATION
+// ============================================
+
+model FirewallIntegration {
+  id                    String   @id @default(cuid())
+  
+  // Firewall Type
+  firewallType          FirewallType
+  
+  // Connection Settings
+  apiUrl                String
+  apiKey                String?  // Encrypted
+  apiUsername           String?
+  apiPassword           String?  // Encrypted
+  
+  // Palo Alto Specific
+  panDeviceGroup        String?
+  panVsys               String   @default("vsys1")
+  
+  // Integration Features
+  autoCreateZone        Boolean  @default(false)
+  autoCreatePolicy      Boolean  @default(false)
+  syncVpnSubnets        Boolean  @default(true)
+  syncUserGroups        Boolean  @default(false)
+  
+  // VPN Zone Settings
+  vpnZoneName           String   @default("vpn-zone")
+  vpnInterface          String   @default("tunnel.1")
+  vpnSubnet             String?
+  
+  // Status
+  isEnabled             Boolean  @default(false)
+  lastSyncAt            DateTime?
+  lastSyncSuccess       Boolean?
+  lastSyncError         String?
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  zones                 FirewallZone[]
+  syncLogs              FirewallSyncLog[]
+
+  @@index([isEnabled])
+  @@index([firewallType])
+}
+
+enum FirewallType {
+  PALO_ALTO
+  FORTINET
+  CISCO_ASA
+  CHECKPOINT
+  JUNIPER
+  SONICWALL
+  CUSTOM
+}
+
+// ============================================
+// FIREWALL ZONE MANAGEMENT
+// ============================================
+
+model FirewallZone {
+  id                    String   @id @default(cuid())
+  firewallId            String
+  firewall              FirewallIntegration @relation(fields: [firewallId], references: [id], onDelete: Cascade)
+  
+  // Zone Info
+  name                  String
+  description           String?
+  zoneType              FirewallZoneType @default(L3)
+  
+  // Network Settings
+  interfaces            String?  // JSON array of interface names
+  subnets               String?  // JSON array of CIDR notations
+  
+  // VPN Zone Settings
+  isVpnZone             Boolean  @default(false)
+  vpnSubnet             String?
+  
+  // Status
+  isEnabled             Boolean  @default(true)
+  syncStatus            SyncStatus @default(PENDING)
+  lastSyncAt            DateTime?
+  syncError             String?
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([firewallId])
+  @@index([isEnabled])
+  @@index([isVpnZone])
+}
+
+enum FirewallZoneType {
+  L3          // Layer 3 zone
+  L2          // Layer 2 zone
+  TAP         // Tap zone
+  EXTERNAL    // External zone
+  TUNNEL      // Tunnel zone (for VPN)
+}
+
+// ============================================
+// FIREWALL SYNC LOG
+// ============================================
+
+model FirewallSyncLog {
+  id                    String   @id @default(cuid())
+  firewallId            String
+  firewall              FirewallIntegration @relation(fields: [firewallId], references: [id], onDelete: Cascade)
+  
+  // Sync Details
+  syncType              FirewallSyncType
+  startedAt             DateTime @default(now())
+  completedAt           DateTime?
+  duration              Int?                       // Milliseconds
+  
+  // Results
+  zonesCreated          Int      @default(0)
+  zonesUpdated          Int      @default(0)
+  zonesDeleted          Int      @default(0)
+  policiesCreated       Int      @default(0)
+  policiesUpdated       Int      @default(0)
+  policiesDeleted       Int      @default(0)
+  subnetsSynced         Int      @default(0)
+  
+  // Status
+  status                SyncStatus @default(PENDING)
+  errorMessage          String?
+  
+  // Details (JSON)
+  details               String?                    // JSON with detailed results
+
+  @@index([firewallId])
+  @@index([startedAt])
+  @@index([status])
+}
+
+enum FirewallSyncType {
+  FULL_SYNC
+  ZONE_SYNC
+  POLICY_SYNC
+  SUBNET_SYNC
+  USER_GROUP_SYNC
+}
+
+// ============================================
+// ACCESS CONTROL POLICIES
+// ============================================
+
+model AccessPolicy {
+  id                    String   @id @default(cuid())
+  
+  // Policy Info
+  name                  String
+  description           String?
+  priority              Int      @default(100)
+  
+  // Match Conditions
+  userGroups            String?  // JSON array of group names
+  certificateTypes      String?  // JSON array
+  deviceTypes           String?  // JSON array
+  sourceCountries       String?  // JSON array of country codes
+  sourceIpRanges        String?  // JSON array of CIDR
+  
+  // Time Restrictions
+  timeSchedule          String?  // JSON with days/hours
+  
+  // Actions
+  action                PolicyAction @default(ALLOW)
+  bandwidthLimit        Int?     // Kbps
+  sessionTimeout        Int?     // Minutes
+  maxConcurrentSessions Int?
+  
+  // Destination Restrictions
+  allowedDestinations   String?  // JSON array of CIDR
+  deniedDestinations    String?  // JSON array of CIDR
+  
+  // Status
+  isEnabled             Boolean  @default(true)
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([isEnabled])
+  @@index([priority])
+}
+
+enum PolicyAction {
+  ALLOW
+  DENY
+  QUARANTINE
+  MONITOR
+}
+
+// ============================================
+// STATIC ROUTES
+// ============================================
+
+model StaticRoute {
+  id              String   @id @default(cuid())
+  destination     String                       // CIDR notation
+  gateway         String
+  interface       String   @default("eth0")
+  metric          Int      @default(100)
+  isEnabled       Boolean  @default(true)
+  description     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([isEnabled])
+}
+
+// ============================================
+// FIREWALL RULES
+// ============================================
+
+model FirewallRule {
+  id              String   @id @default(cuid())
+  name            String
+  action          String   @default("ALLOW")      // ALLOW, DENY
+  protocol        String   @default("TCP")        // TCP, UDP, ICMP, ALL
+  sourcePort      String?
+  destPort        String?
+  sourceIp        String   @default("0.0.0.0/0")
+  destIp          String   @default("0.0.0.0/0")
+  interface       String   @default("eth0")
+  isEnabled       Boolean  @default(true)
+  priority        Int      @default(100)
+  description     String?
+
+  // nftables-specific fields
+  handle          Int?                             // nftables rule handle
+  tableName       String   @default("filter")     // Table name (filter, nat, etc.)
+  family          String   @default("inet")       // Table family (inet, ip, ip6)
+  chainName       String   @default("input")      // Chain name (input, output, forward, etc.)
+  ruleType        String   @default("filter")     // Rule type (filter, nat, forward)
+
+  // Statistics (synced from nftables)
+  packets         Int      @default(0)
+  bytes           Int      @default(0)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([isEnabled])
+  @@index([priority])
+  @@index([tableName])
+  @@index([chainName])
+  @@index([family])
+}
+
+// ============================================
+// NAT POLICIES
+// ============================================
+
+model NatPolicy {
+  id              String   @id @default(cuid())
+  name            String
+  type            String   @default("SNAT")       // SNAT, DNAT, MASQUERADE
+  sourceIp        String   @default("0.0.0.0/0")
+  destIp          String   @default("0.0.0.0/0")
+  interface       String   @default("eth0")
+  translatedIp    String
+  isEnabled       Boolean  @default(true)
+  description     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([isEnabled])
+}
+
+// ============================================
+// RATE LIMITING
+// ============================================
+
+model RateLimitConfig {
+  id                    String   @id @default(cuid())
+  
+  // Scope
+  scope                 RateLimitScope            // GLOBAL, VPN, API, PER_USER
+  name                  String
+  
+  // Limits
+  requestsPerSecond     Int?
+  requestsPerMinute     Int?
+  requestsPerHour       Int?
+  requestsPerDay        Int?
+  
+  // Burst Settings
+  burstSize             Int?                      // Max burst allowed
+  burstWindow           Int?                      // Seconds
+  
+  // Connection Limits
+  maxConnections        Int?                      // Max concurrent connections
+  maxConnectionsPerIp   Int?
+  
+  // Action on Limit
+  action                RateLimitAction @default(BLOCK)
+  blockDuration         Int?                      // Seconds to block
+  
+  // Whitelist/Bypass
+  whitelistIps          String?                   // JSON array of IPs
+  whitelistCountries    String?                   // JSON array of country codes
+  
+  // Status
+  isEnabled             Boolean  @default(true)
+  
+  // Stats
+  totalRequests         Int      @default(0)
+  totalBlocked          Int      @default(0)
+  lastBlockedAt         DateTime?
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([scope])
+  @@index([isEnabled])
+}
+
+enum RateLimitScope {
+  GLOBAL          // System-wide rate limiting
+  VPN             // VPN connection rate limiting
+  API             // API rate limiting
+  PER_USER        // Per-user rate limiting
+  PER_IP          // Per-IP rate limiting
+}
+
+enum RateLimitAction {
+  BLOCK           // Block the request
+  THROTTLE        // Slow down the request
+  LOG_ONLY        // Log but don't block
+  CHALLENGE       // Show CAPTCHA or similar
+}
+
+// ============================================
+// KERNEL FIREWALL (iptables/nftables)
+// ============================================
+
+model KernelFirewallRule {
+  id                String   @id @default(cuid())
+  
+  // Rule Info
+  name              String
+  chain             String   @default("INPUT")      // INPUT, OUTPUT, FORWARD, PREROUTING, POSTROUTING
+  table             String   @default("filter")     // filter, nat, mangle, raw
+  
+  // Match Conditions
+  protocol          String?                          // tcp, udp, icmp, all
+  sourceIp          String?
+  sourcePort        String?
+  destIp            String?
+  destPort          String?
+  inInterface       String?
+  outInterface      String?
+  
+  // Advanced Matches
+  tcpFlags          String?                          // SYN,ACK,FIN,RST
+  connectionState   String?                          // NEW,ESTABLISHED,RELATED,INVALID
+  matchExtensions   String?                          // JSON for additional matches
+  
+  // Action
+  target            String   @default("ACCEPT")      // ACCEPT, DROP, REJECT, LOG, MASQUERADE, SNAT, DNAT
+  targetParams      String?                          // Additional parameters for target
+  
+  // Rule Management
+  priority          Int      @default(100)
+  isEnabled         Boolean  @default(true)
+  isApplied         Boolean  @default(false)         // Whether applied to kernel
+  
+  // Tracking
+  packetsMatched    Int      @default(0)
+  bytesMatched      Int      @default(0)
+  lastMatchedAt     DateTime?
+  
+  // Metadata
+  description       String?
+  isSystemRule      Boolean  @default(false)
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  appliedAt         DateTime?
+
+  @@index([chain])
+  @@index([table])
+  @@index([isEnabled])
+  @@index([isApplied])
+  @@index([priority])
+}
+
+// ============================================
+// FIREWALL ZONES (Kernel-level)
+// ============================================
+
+model KernelFirewallZone {
+  id                String   @id @default(cuid())
+  
+  // Zone Info
+  name              String   @unique
+  description       String?
+  
+  // Network
+  interfaces        String?                          // JSON array of interfaces
+  subnets           String?                          // JSON array of CIDR
+  ports             String?                          // JSON array of ports
+  
+  // Security Level
+  securityLevel     SecurityLevel @default(MEDIUM)
+  
+  // Default Policies
+  inputPolicy       String   @default("DROP")
+  outputPolicy      String   @default("ACCEPT")
+  forwardPolicy     String   @default("DROP")
+  
+  // Features
+  enableLogging     Boolean  @default(true)
+  enableStateful    Boolean  @default(true)
+  
+  // Status
+  isEnabled         Boolean  @default(true)
+  isApplied         Boolean  @default(false)
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  appliedAt         DateTime?
+
+  @@index([isEnabled])
+  @@index([isApplied])
+}
+
+enum SecurityLevel {
+  HIGH             // Most restrictive
+  MEDIUM           // Balanced
+  LOW              // Less restrictive
+  CUSTOM           // Custom rules
+}

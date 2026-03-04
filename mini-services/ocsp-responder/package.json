@@ -1,0 +1,11 @@
+{
+  "name": "ocsp-responder",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot index.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.11.1"
+  }
+}
