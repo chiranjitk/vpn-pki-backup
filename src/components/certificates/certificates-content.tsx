@@ -109,6 +109,14 @@ interface User {
   certificateStatus: string
 }
 
+interface CertificateAuthority {
+  id: string
+  name: string
+  subject: string
+  isDefault: boolean
+  isExternal: boolean
+}
+
 export function CertificatesContent() {
   const [certificates, setCertificates] = useState<Certificate[]>([])
   const [stats, setStats] = useState<CertificateStats>({ total: 0, active: 0, expired: 0, revoked: 0, pending: 0 })
@@ -120,6 +128,8 @@ export function CertificatesContent() {
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [selectedUser, setSelectedUser] = useState<string>('')
+  const [cas, setCas] = useState<CertificateAuthority[]>([])
+  const [selectedCA, setSelectedCA] = useState<string>('')
   const [validityDays, setValidityDays] = useState('365')
   const [keySize, setKeySize] = useState('4096')
   const [isGenerating, setIsGenerating] = useState(false)
@@ -162,6 +172,23 @@ export function CertificatesContent() {
     }
   }
 
+  const fetchCAs = async () => {
+    try {
+      const response = await fetch('/api/certificates')
+      if (response.ok) {
+        const data = await response.json()
+        setCas(data.cas || [])
+        // Set default CA if available
+        const defaultCA = data.cas?.find((ca: CertificateAuthority) => ca.isDefault && !ca.isExternal)
+        if (defaultCA) {
+          setSelectedCA(defaultCA.id)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching CAs:', error)
+    }
+  }
+
   useEffect(() => {
     fetchCertificates()
   }, [searchQuery, statusFilter])
@@ -169,6 +196,7 @@ export function CertificatesContent() {
   useEffect(() => {
     if (showGenerateDialog) {
       fetchUsers()
+      fetchCAs()
     }
   }, [showGenerateDialog])
 
@@ -204,6 +232,11 @@ export function CertificatesContent() {
       return
     }
 
+    if (!selectedCA) {
+      toast.error('Please select a Certificate Authority')
+      return
+    }
+
     // Calculate validity days
     let validity = 0
     if (validityMode === 'custom' && customExpiryDate) {
@@ -226,6 +259,7 @@ export function CertificatesContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: selectedUser,
+          caId: selectedCA,
           validityDays: validity,
           keySize: parseInt(keySize),
           generatePfx: true,
@@ -249,6 +283,7 @@ export function CertificatesContent() {
       
       setShowGenerateDialog(false)
       setSelectedUser('')
+      setSelectedCA('')
       fetchCertificates()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to generate certificate')
@@ -557,6 +592,30 @@ export function CertificatesContent() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Signing CA (Certificate Authority)</Label>
+              <Select value={selectedCA} onValueChange={setSelectedCA}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a Certificate Authority" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cas.length === 0 ? (
+                    <SelectItem value="_none" disabled>No CAs available - Initialize CA first</SelectItem>
+                  ) : (
+                    cas.filter(ca => !ca.isExternal).map((ca) => (
+                      <SelectItem key={ca.id} value={ca.id}>
+                        {ca.name} {ca.isDefault ? '(Default)' : ''}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {cas.length === 0 && (
+                <p className="text-xs text-amber-600">
+                  No managed CAs available. Please initialize a CA in PKI Management first.
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

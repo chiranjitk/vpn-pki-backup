@@ -91,6 +91,14 @@ interface CertificateStats {
   deployed: number
 }
 
+interface CertificateAuthority {
+  id: string
+  name: string
+  subject: string
+  isDefault: boolean
+  isExternal: boolean
+}
+
 export function ServerCertificatesContent() {
   const [certificates, setCertificates] = useState<ServerCertificate[]>([])
   const [stats, setStats] = useState<CertificateStats>({ total: 0, active: 0, expired: 0, deployed: 0 })
@@ -104,6 +112,8 @@ export function ServerCertificatesContent() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [certToDelete, setCertToDelete] = useState<ServerCertificate | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [cas, setCas] = useState<CertificateAuthority[]>([])
+  const [selectedCA, setSelectedCA] = useState<string>('')
 
   // Form state
   const [hostname, setHostname] = useState('')
@@ -129,8 +139,26 @@ export function ServerCertificatesContent() {
     }
   }
 
+  const fetchCAs = async () => {
+    try {
+      const response = await fetch('/api/server-certificates')
+      if (response.ok) {
+        const data = await response.json()
+        setCas(data.cas || [])
+        // Set default CA if available
+        const defaultCA = data.cas?.find((ca: CertificateAuthority) => ca.isDefault && !ca.isExternal)
+        if (defaultCA) {
+          setSelectedCA(defaultCA.id)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching CAs:', error)
+    }
+  }
+
   useEffect(() => {
     fetchCertificates()
+    fetchCAs()
   }, [])
 
   const getStatusBadge = (status: string) => {
@@ -161,6 +189,11 @@ export function ServerCertificatesContent() {
       return
     }
 
+    if (!selectedCA) {
+      toast.error('Please select a Certificate Authority')
+      return
+    }
+
     setIsGenerating(true)
     try {
       const response = await fetch('/api/server-certificates', {
@@ -169,6 +202,7 @@ export function ServerCertificatesContent() {
         body: JSON.stringify({
           hostname: hostname || undefined,
           commonName: commonName || undefined,
+          caId: selectedCA,
           validityDays: parseInt(validityDays),
           keySize: parseInt(keySize),
           sanDomains: sanDomains ? sanDomains.split(',').map(d => d.trim()).filter(Boolean) : [],
@@ -270,6 +304,7 @@ export function ServerCertificatesContent() {
     setSanDomains('')
     setSanIPs('')
     setDeployNow(false)
+    setSelectedCA('')
   }
 
   const filteredCertificates = searchQuery
@@ -490,6 +525,31 @@ export function ServerCertificatesContent() {
                   onChange={(e) => setCommonName(e.target.value)}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Signing CA (Certificate Authority)</Label>
+              <Select value={selectedCA} onValueChange={setSelectedCA}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a Certificate Authority" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cas.length === 0 ? (
+                    <SelectItem value="_none" disabled>No CAs available - Initialize CA first</SelectItem>
+                  ) : (
+                    cas.filter(ca => !ca.isExternal).map((ca) => (
+                      <SelectItem key={ca.id} value={ca.id}>
+                        {ca.name} {ca.isDefault ? '(Default)' : ''}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {cas.length === 0 && (
+                <p className="text-xs text-amber-600">
+                  No managed CAs available. Please initialize a CA in PKI Management first.
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

@@ -1,6 +1,12 @@
 /**
  * strongSwan VPN Integration Layer
  * Manages configuration and certificate deployment for strongSwan 6.0.1
+ * 
+ * IMPORTANT: For IKEv2 EAP-TLS to work properly:
+ * - CA certificates MUST be in /etc/swanctl/x509ca/ (trusted root CAs)
+ * - Server/end-entity certificates in /etc/swanctl/x509/
+ * - Private keys in /etc/swanctl/private/
+ * - CRL files in /etc/swanctl/x509crl/
  */
 
 import * as fs from 'fs'
@@ -10,16 +16,28 @@ import { promisify } from 'util'
 
 const execAsync = promisify(exec)
 
-// strongSwan Paths
+// strongSwan 6.0.1 standard paths
 export const STRONGSWAN_PATHS = {
   swanctlDir: '/etc/swanctl',
+  
+  // CA certificates - CRITICAL: This is where trusted CAs go for client cert verification
   x509caDir: '/etc/swanctl/x509ca',
+  
+  // End entity certificates (server certs, NOT CA certs)
   x509Dir: '/etc/swanctl/x509',
+  
+  // Private keys
   privateDir: '/etc/swanctl/private',
+  
+  // CRL files
   crlDir: '/etc/swanctl/x509crl',
+  
+  // Configuration
   confDir: '/etc/swanctl/conf.d',
   swanctlConf: '/etc/swanctl/swanctl.conf',
   strongswanConf: '/etc/strongswan.conf',
+  
+  // Legacy ipsec.d (not used in modern strongSwan)
   ipsecD: '/etc/ipsec.d',
 }
 
@@ -186,68 +204,188 @@ export async function restartStrongSwan(): Promise<{ success: boolean; message: 
 }
 
 /**
- * Ensure strongSwan directories exist
+ * Ensure all strongSwan directories exist with correct permissions
  */
 export function ensureStrongSwanDirs(): void {
-  Object.values(STRONGSWAN_PATHS).forEach((dir) => {
-    if (dir.includes('.')) return // Skip files
+  const dirs = [
+    { path: STRONGSWAN_PATHS.swanctlDir, mode: 0o755 },
+    { path: STRONGSWAN_PATHS.x509caDir, mode: 0o755 },   // CA certs - world readable
+    { path: STRONGSWAN_PATHS.x509Dir, mode: 0o755 },     // Server certs - world readable
+    { path: STRONGSWAN_PATHS.privateDir, mode: 0o700 },  // Private keys - root only
+    { path: STRONGSWAN_PATHS.crlDir, mode: 0o755 },      // CRLs - world readable
+    { path: STRONGSWAN_PATHS.confDir, mode: 0o755 },
+  ]
+  
+  dirs.forEach(({ path: dir, mode }) => {
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true, mode: 0o755 })
+      fs.mkdirSync(dir, { recursive: true, mode })
     }
   })
 }
 
 /**
- * Deploy CA certificate
+ * Validate PEM certificate format
  */
-export function deployCACertificate(caCertPath: string, name?: string): string {
-  ensureStrongSwanDirs()
-  
-  const certName = name || path.basename(caCertPath, '.pem')
-  const destPath = path.join(STRONGSWAN_PATHS.x509caDir, `${certName}.pem`)
-  
-  fs.copyFileSync(caCertPath, destPath)
-  fs.chmodSync(destPath, 0o644)
-  
-  return destPath
+export function validatePEMCertificate(certPath: string): { valid: boolean; error?: string } {
+  try {
+    if (!fs.existsSync(certPath)) {
+      return { valid: false, error: 'File does not exist' }
+    }
+    
+    const content = fs.readFileSync(certPath, 'utf-8')
+    
+    // Check for PEM headers
+    if (!content.includes('-----BEGIN CERTIFICATE-----') || 
+        !content.includes('-----END CERTIFICATE-----')) {
+      return { valid: false, error: 'Invalid PEM format - missing certificate headers' }
+    }
+    
+    // Verify with OpenSSL
+    try {
+      execSync(`openssl x509 -in ${certPath} -noout -text 2>/dev/null`)
+      return { valid: true }
+    } catch {
+      return { valid: false, error: 'OpenSSL cannot parse certificate' }
+    }
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    return { valid: false, error: err.message }
+  }
 }
 
 /**
- * Deploy server certificate
+ * Validate PEM private key format
+ */
+export function validatePEMKey(keyPath: string): { valid: boolean; error?: string } {
+  try {
+    if (!fs.existsSync(keyPath)) {
+      return { valid: false, error: 'File does not exist' }
+    }
+    
+    const content = fs.readFileSync(keyPath, 'utf-8')
+    
+    // Check for PEM headers (RSA or PKCS#8)
+    if (!content.includes('-----BEGIN') || !content.includes('PRIVATE KEY-----')) {
+      return { valid: false, error: 'Invalid PEM format - missing private key headers' }
+    }
+    
+    // Verify with OpenSSL
+    try {
+      execSync(`openssl rsa -in ${keyPath} -check -noout 2>/dev/null || openssl pkey -in ${keyPath} -check -noout 2>/dev/null`)
+      return { valid: true }
+    } catch {
+      return { valid: false, error: 'OpenSSL cannot parse private key' }
+    }
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    return { valid: false, error: err.message }
+  }
+}
+
+/**
+ * Deploy CA certificate to x509ca directory
+ * CRITICAL: CA certificates MUST be in x509ca for client certificate verification
+ */
+export function deployCACertificate(caCertPath: string, name?: string): { 
+  success: boolean
+  destPath?: string
+  error?: string 
+} {
+  try {
+    ensureStrongSwanDirs()
+    
+    // Validate certificate first
+    const validation = validatePEMCertificate(caCertPath)
+    if (!validation.valid) {
+      return { success: false, error: `Invalid CA certificate: ${validation.error}` }
+    }
+    
+    const certName = name || path.basename(caCertPath, '.pem')
+    const destPath = path.join(STRONGSWAN_PATHS.x509caDir, `${certName}.pem`)
+    
+    // Copy certificate
+    fs.copyFileSync(caCertPath, destPath)
+    fs.chmodSync(destPath, 0o644)
+    
+    console.log(`[PKI] CA certificate deployed to: ${destPath}`)
+    
+    return { success: true, destPath }
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    return { success: false, error: err.message }
+  }
+}
+
+/**
+ * Deploy server certificate to x509 directory
  */
 export function deployServerCertificate(
   certPath: string,
   keyPath: string,
   name?: string
-): { certDest: string; keyDest: string } {
-  ensureStrongSwanDirs()
-  
-  const certName = name || path.basename(certPath, '.pem')
-  const certDest = path.join(STRONGSWAN_PATHS.x509Dir, `${certName}.pem`)
-  const keyDest = path.join(STRONGSWAN_PATHS.privateDir, `${certName}.pem`)
-  
-  fs.copyFileSync(certPath, certDest)
-  fs.copyFileSync(keyPath, keyDest)
-  
-  fs.chmodSync(certDest, 0o644)
-  fs.chmodSync(keyDest, 0o600) // Private key should be 600
-  
-  return { certDest, keyDest }
+): { success: boolean; certDest?: string; keyDest?: string; error?: string } {
+  try {
+    ensureStrongSwanDirs()
+    
+    // Validate certificate
+    const certValidation = validatePEMCertificate(certPath)
+    if (!certValidation.valid) {
+      return { success: false, error: `Invalid server certificate: ${certValidation.error}` }
+    }
+    
+    // Validate key
+    const keyValidation = validatePEMKey(keyPath)
+    if (!keyValidation.valid) {
+      return { success: false, error: `Invalid private key: ${keyValidation.error}` }
+    }
+    
+    const certName = name || path.basename(certPath, '.pem')
+    const certDest = path.join(STRONGSWAN_PATHS.x509Dir, `${certName}.pem`)
+    const keyDest = path.join(STRONGSWAN_PATHS.privateDir, `${certName}.pem`)
+    
+    // Copy files
+    fs.copyFileSync(certPath, certDest)
+    fs.copyFileSync(keyPath, keyDest)
+    
+    // Set permissions
+    fs.chmodSync(certDest, 0o644)
+    fs.chmodSync(keyDest, 0o600) // Private key must be 600
+    
+    console.log(`[PKI] Server certificate deployed to: ${certDest}`)
+    console.log(`[PKI] Private key deployed to: ${keyDest}`)
+    
+    return { success: true, certDest, keyDest }
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    return { success: false, error: err.message }
+  }
 }
 
 /**
- * Deploy CRL
+ * Deploy CRL to x509crl directory
  */
-export function deployCRL(crlPath: string, name?: string): string {
-  ensureStrongSwanDirs()
-  
-  const crlName = name || path.basename(crlPath, '.pem')
-  const destPath = path.join(STRONGSWAN_PATHS.crlDir, `${crlName}.pem`)
-  
-  fs.copyFileSync(crlPath, destPath)
-  fs.chmodSync(destPath, 0o644)
-  
-  return destPath
+export function deployCRL(crlPath: string, name?: string): { success: boolean; destPath?: string; error?: string } {
+  try {
+    ensureStrongSwanDirs()
+    
+    if (!fs.existsSync(crlPath)) {
+      return { success: false, error: 'CRL file does not exist' }
+    }
+    
+    const crlName = name || path.basename(crlPath, '.pem').replace('.crl', '')
+    const destPath = path.join(STRONGSWAN_PATHS.crlDir, `${crlName}.crl`)
+    
+    // Copy CRL
+    fs.copyFileSync(crlPath, destPath)
+    fs.chmodSync(destPath, 0o644)
+    
+    console.log(`[PKI] CRL deployed to: ${destPath}`)
+    
+    return { success: true, destPath }
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    return { success: false, error: err.message }
+  }
 }
 
 /**
@@ -284,6 +422,7 @@ export function removeServerCertificate(name: string): boolean {
 
 /**
  * Generate swanctl.conf for IKEv2 EAP-TLS
+ * This configuration supports certificate-based authentication
  */
 export function generateSwanctlConf(config: {
   serverCert: string
@@ -292,50 +431,82 @@ export function generateSwanctlConf(config: {
   localAddrs: string[]
   virtualIpPool: string
   dnsServers: string[]
+  serverId?: string
 }): string {
-  const caCertList = config.caCerts.map(c => `"${c}"`).join(', ')
+  const serverId = config.serverId || config.localAddrs[0] || 'vpn.server'
   
-  return `
-# VPN PKI Management Platform - Generated Configuration
-# IKEv2 EAP-TLS Configuration for strongSwan 6.0.1
+  return `# VPN PKI Management Platform - Generated Configuration
+# IKEv2 Certificate-Based Authentication for strongSwan 6.0.1
+# Generated: ${new Date().toISOString()}
 
 connections {
-  ikev2-eap-tls {
+  ikev2-cert {
+    # IKE version 2 only
     version = 2
+    
+    # MOBIKE support for mobile clients
     mobike = yes
+    
+    # Disable reauthentication (use rekey instead)
     reauth_time = 0
+    
+    # Enable fragmentation for better NAT traversal
     fragmentation = yes
     
+    # Local (server) addresses
     local_addrs = ${config.localAddrs.join(', ')}
+    
+    # Server authentication with certificate
     local {
-      auth = eap-tls
+      auth = pubkey
       certs = ${config.serverCert}
-      id = @vpn.server
-    }
-    remote {
-      auth = eap-tls
-      eap_id = %any
+      id = @${serverId}
     }
     
+    # Client authentication with certificate (EAP-TLS)
+    remote {
+      auth = pubkey
+      # Accept any client certificate signed by our CA
+      cacerts = ${config.caCerts.join(', ')}
+      id = %any
+    }
+    
+    # Child SA (IPsec tunnel)
     children {
-      ikev2-eap-tls {
+      ikev2-cert {
+        # Traffic selectors
         local_ts = 0.0.0.0/0
         remote_ts = dynamic
         
-        esp_proposals = aes256gcm16-sha256-x25519
+        # ESP proposals (AES-256-GCM with SHA256 and ECDH)
+        esp_proposals = aes256gcm16-sha256-x25519,aes256-sha256-modp2048
+        
+        # Tunnel mode
         mode = tunnel
+        
+        # DPD action
         dpd_action = restart
         
+        # Enable IPsec policies
         policies = yes
       }
     }
     
+    # IKE proposals
+    ike_proposals = aes256-sha256-x25519,aes256-sha256-modp2048
+    
+    # Virtual IP pool
     pools = vpn-pool
     
-    ike_proposals = aes256-sha256-x25519
+    # Send certificate requests
+    send_certreq = yes
+    
+    # Send our certificate always
+    send_cert = always
   }
 }
 
+# Virtual IP pools
 pools {
   vpn-pool {
     addrs = ${config.virtualIpPool}
@@ -343,13 +514,7 @@ pools {
   }
 }
 
-authorities {
-  ca-authority {
-    certs = ${caCertList}
-    crl_uris = file://${STRONGSWAN_PATHS.crlDir}/ca.crl.pem
-  }
-}
-
+# Secrets (private keys)
 secrets {
   private-server {
     file = ${config.serverKey}
@@ -359,29 +524,47 @@ secrets {
 }
 
 /**
- * Generate strongswan.conf
+ * Generate strongswan.conf for optimal IKEv2 operation
  */
 export function generateStrongswanConf(): string {
-  return `
-# strongSwan configuration file
+  return `# strongSwan configuration file
 # Generated by VPN PKI Management Platform
+# For strongSwan 6.0.1
 
 charon {
+  # Load modular plugins
   load_modular = yes
+  
+  # Number of worker threads
+  threads = 16
+  
+  # CRL checking mode
+  # strict: require valid CRL for all certs
+  # ifpossible: use CRL if available
+  # never: don't check CRLs
+  crl_check = ifpossible
+  
+  # Cache CRLs in memory
+  cache_crl = yes
+  
+  # Certificate verification
+  certificates {
+    # Warn on expired CRL
+    crl_reload = yes
+    # Cache certificates
+    cache = yes
+  }
+  
+  # Plugins configuration
   plugins {
     include strongswan.d/charon/*.conf
   }
   
-  # Enable CRL checking
-  crl_check = strict
-  
-  # Cache CRLs
-  cache_crl = yes
-  
-  # File logging
+  # File logging for debugging
   filelog {
     /var/log/charon.log {
       time_format = %b %e %T
+      # Log level: 0=none, 1=control, 2=controlmore, 3=debug, 4=private
       default = 2
       append = no
       flush_line = yes
@@ -389,6 +572,7 @@ charon {
   }
 }
 
+# Legacy pluto configuration (not used in strongSwan 6.x)
 pluto {
   load_modular = yes
   plugins {
@@ -414,7 +598,7 @@ export function writeStrongswanConf(content: string): void {
 }
 
 /**
- * List installed CA certificates
+ * List installed CA certificates in x509ca
  */
 export function listCACertificates(): string[] {
   if (!fs.existsSync(STRONGSWAN_PATHS.x509caDir)) {
@@ -426,7 +610,7 @@ export function listCACertificates(): string[] {
 }
 
 /**
- * List installed server certificates
+ * List installed server certificates in x509
  */
 export function listServerCertificates(): string[] {
   if (!fs.existsSync(STRONGSWAN_PATHS.x509Dir)) {
@@ -447,6 +631,48 @@ export function listCRLs(): string[] {
   return fs.readdirSync(STRONGSWAN_PATHS.crlDir)
     .filter(f => f.endsWith('.pem') || f.endsWith('.crl'))
     .map(f => path.basename(f))
+}
+
+/**
+ * Verify strongSwan deployment status
+ */
+export function verifyDeployment(): {
+  caDeployed: boolean
+  crlDeployed: boolean
+  configExists: boolean
+  errors: string[]
+  warnings: string[]
+} {
+  const errors: string[] = []
+  const warnings: string[] = []
+  
+  // Check CA certificates
+  const caCerts = listCACertificates()
+  const caDeployed = caCerts.length > 0
+  if (!caDeployed) {
+    errors.push('No CA certificate found in /etc/swanctl/x509ca/')
+  }
+  
+  // Check CRL
+  const crls = listCRLs()
+  const crlDeployed = crls.length > 0
+  if (!crlDeployed) {
+    warnings.push('No CRL found in /etc/swanctl/x509crl/ - certificate status checking disabled')
+  }
+  
+  // Check swanctl.conf
+  const configExists = fs.existsSync(STRONGSWAN_PATHS.swanctlConf)
+  if (!configExists) {
+    errors.push('swanctl.conf not found')
+  }
+  
+  return {
+    caDeployed,
+    crlDeployed,
+    configExists,
+    errors,
+    warnings,
+  }
 }
 
 /**
@@ -549,5 +775,39 @@ export async function fetchCRL(url: string, outputPath: string): Promise<{ succe
   } catch (error: unknown) {
     const execError = error as { message?: string }
     return { success: false, message: `Failed to fetch CRL: ${execError.message}` }
+  }
+}
+
+/**
+ * Get loaded certificates from strongSwan
+ */
+export async function getLoadedCertificates(): Promise<{
+  success: boolean
+  certificates: Array<{ type: string; subject: string; issuer: string }>
+  error?: string
+}> {
+  try {
+    const { stdout } = await execAsync('swanctl --list-certs 2>/dev/null || echo ""')
+    
+    const certificates: Array<{ type: string; subject: string; issuer: string }> = []
+    const lines = stdout.split('\n')
+    
+    for (const line of lines) {
+      if (line.includes('subject:')) {
+        const subjectMatch = line.match(/subject:\s*"([^"]+)"/)
+        if (subjectMatch) {
+          certificates.push({
+            type: 'unknown',
+            subject: subjectMatch[1],
+            issuer: ''
+          })
+        }
+      }
+    }
+    
+    return { success: true, certificates }
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    return { success: false, certificates: [], error: err.message }
   }
 }

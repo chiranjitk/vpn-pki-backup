@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -56,6 +57,13 @@ import {
   Loader2,
   Server,
   ExternalLink,
+  Upload,
+  FileKey,
+  Globe,
+  Copy,
+  FileText,
+  User,
+  ArrowRightLeft,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
@@ -78,6 +86,7 @@ interface PKIData {
     expiryDate: string
     keySize: number
     filesExist: boolean
+    crlUrl?: string
     paths: {
       certificatePath: string
       keyPath: string
@@ -104,6 +113,13 @@ interface PKIData {
     errors: string[]
     warnings: string[]
   }
+  deployment?: {
+    caDeployed: boolean
+    crlDeployed: boolean
+    configExists: boolean
+    errors: string[]
+    warnings: string[]
+  }
   paths: Array<{
     name: string
     path: string
@@ -113,6 +129,32 @@ interface PKIData {
   }>
 }
 
+interface CSRData {
+  id: string
+  dbId: string
+  type: 'server' | 'client'
+  commonName: string
+  subject: string
+  keySize: number
+  createdAt: string
+  csrPath: string
+  keyPath: string
+  status: string
+  user?: {
+    id: string
+    username: string
+    email: string
+  }
+  sanDomains?: string[]
+  sanIPs?: string[]
+}
+
+interface VpnUser {
+  id: string
+  username: string
+  email: string
+}
+
 export function PKIContent() {
   const router = useRouter()
   const [data, setData] = useState<PKIData | null>(null)
@@ -120,11 +162,65 @@ export function PKIContent() {
   const [showInitDialog, setShowInitDialog] = useState(false)
   const [showRegenerateDialog, setShowRegenerateDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showExternalCADialog, setShowExternalCADialog] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deploying, setDeploying] = useState(false)
   const [regeneratingCrl, setRegeneratingCrl] = useState(false)
   
-  // Settings state with controlled inputs
+  // CSR state
+  const [csrs, setCsrs] = useState<CSRData[]>([])
+  const [csrsLoading, setCsrsLoading] = useState(false)
+  const [showCSRDialog, setShowCSRDialog] = useState(false)
+  const [showUploadCertDialog, setShowUploadCertDialog] = useState(false)
+  const [selectedCSR, setSelectedCSR] = useState<CSRData | null>(null)
+  const [generatedCSR, setGeneratedCSR] = useState<{
+    csrId: string
+    dbId: string
+    csrPem: string
+    type: string
+    commonName: string
+    download: { csr: string; key: string }
+  } | null>(null)
+  const [showCSRResult, setShowCSRResult] = useState(false)
+  const [vpnUsers, setVpnUsers] = useState<VpnUser[]>([])
+  
+  // CSR form state
+  const [csrForm, setCsrForm] = useState({
+    type: 'server' as 'server' | 'client',
+    commonName: '',
+    sanDomains: '',
+    sanIPs: '',
+    userId: '',
+    keySize: '4096',
+    organization: '',
+    country: '',
+  })
+  
+  // Upload certificate form
+  const [uploadCertForm, setUploadCertForm] = useState({
+    certificatePem: '',
+    chainPem: '',
+  })
+  const [uploadingCert, setUploadingCert] = useState(false)
+  const [uploadedCertResult, setUploadedCertResult] = useState<{
+    success: boolean
+    certificate: {
+      id: string
+      serialNumber: string
+      commonName: string
+      subject: string
+      expiryDate: string
+      status: string
+    }
+    paths: {
+      certificate: string
+      key?: string
+      chain?: string
+      pkcs12?: string
+    }
+  } | null>(null)
+  
+  // Settings state
   const [settingsForm, setSettingsForm] = useState({
     minKeySize: 4096,
     defaultClientValidityDays: 365,
@@ -135,10 +231,19 @@ export function PKIContent() {
   
   const [initForm, setInitForm] = useState({
     name: '24online VPN Root CA',
-    country: 'US',
+    country: 'IN',
     organization: '24online',
     keySize: '4096',
     validityDays: '3650',
+  })
+
+  // External CA form
+  const [externalCAForm, setExternalCAForm] = useState({
+    name: '',
+    certificatePem: '',
+    intermediatePem: '',
+    crlUrl: '',
+    crlPem: '',
   })
 
   const fetchData = async () => {
@@ -147,7 +252,6 @@ export function PKIContent() {
       if (!response.ok) throw new Error('Failed to fetch PKI data')
       const result = await response.json()
       setData(result)
-      // Update settings form with fetched data
       if (result.settings) {
         setSettingsForm({
           minKeySize: result.settings.minKeySize || 4096,
@@ -165,9 +269,41 @@ export function PKIContent() {
     }
   }
 
+  const fetchCSRs = async () => {
+    setCsrsLoading(true)
+    try {
+      const response = await fetch('/api/csr')
+      if (!response.ok) throw new Error('Failed to fetch CSRs')
+      const result = await response.json()
+      setCsrs(result.csrs || [])
+    } catch (error) {
+      console.error('Error fetching CSRs:', error)
+      toast.error('Failed to load CSRs')
+    } finally {
+      setCsrsLoading(false)
+    }
+  }
+
+  const fetchVpnUsers = async () => {
+    try {
+      const response = await fetch('/api/users?limit=100')
+      if (!response.ok) throw new Error('Failed to fetch users')
+      const result = await response.json()
+      setVpnUsers(result.users || [])
+    } catch (error) {
+      console.error('Error fetching users:', error)
+    }
+  }
+
   useEffect(() => {
     fetchData()
   }, [])
+
+  useEffect(() => {
+    if (data?.ca) {
+      fetchCSRs()
+    }
+  }, [data?.ca])
 
   const handleInitializeCA = async () => {
     setIsSubmitting(true)
@@ -193,6 +329,33 @@ export function PKIContent() {
       fetchData()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to initialize CA')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleImportExternalCA = async () => {
+    setIsSubmitting(true)
+    try {
+      const response = await fetch('/api/pki/external-ca', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'import_external_ca',
+          ...externalCAForm,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to import External CA')
+      }
+
+      toast.success('External CA imported successfully')
+      setShowExternalCADialog(false)
+      fetchData()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to import External CA')
     } finally {
       setIsSubmitting(false)
     }
@@ -327,11 +490,160 @@ export function PKIContent() {
     }
   }
 
-  // Helper to truncate long serial numbers
+  // CSR Handlers
+  const handleGenerateCSR = async () => {
+    if (!csrForm.commonName.trim()) {
+      toast.error('Common Name is required')
+      return
+    }
+    
+    setIsSubmitting(true)
+    try {
+      const payload: Record<string, unknown> = {
+        type: csrForm.type,
+        commonName: csrForm.commonName,
+        keySize: parseInt(csrForm.keySize),
+        organization: csrForm.organization || undefined,
+        country: csrForm.country || undefined,
+      }
+      
+      if (csrForm.type === 'server') {
+        if (csrForm.sanDomains) {
+          payload.sanDomains = csrForm.sanDomains.split(',').map(d => d.trim()).filter(Boolean)
+        }
+        if (csrForm.sanIPs) {
+          payload.sanIPs = csrForm.sanIPs.split(',').map(d => d.trim()).filter(Boolean)
+        }
+      } else {
+        if (csrForm.userId) {
+          payload.userId = csrForm.userId
+        }
+      }
+      
+      const response = await fetch('/api/csr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to generate CSR')
+      }
+
+      const result = await response.json()
+      setGeneratedCSR(result)
+      setShowCSRResult(true)
+      setShowCSRDialog(false)
+      fetchCSRs()
+      toast.success('CSR generated successfully')
+      
+      // Reset form
+      setCsrForm({
+        type: 'server',
+        commonName: '',
+        sanDomains: '',
+        sanIPs: '',
+        userId: '',
+        keySize: '4096',
+        organization: '',
+        country: '',
+      })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to generate CSR')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDeleteCSR = async (csr: CSRData) => {
+    try {
+      const response = await fetch(`/api/csr/${csr.dbId}?type=${csr.type}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to delete CSR')
+      }
+
+      toast.success('CSR deleted successfully')
+      fetchCSRs()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete CSR')
+    }
+  }
+
+  const handleDownloadCSR = (csr: CSRData, format: 'csr' | 'key') => {
+    window.open(`/api/csr/${csr.dbId}/download?type=${csr.type}&format=${format}`, '_blank')
+    toast.success(`${format.toUpperCase()} download started`)
+  }
+
+  const handleCopyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success(`${label} copied to clipboard`)
+    } catch {
+      toast.error('Failed to copy to clipboard')
+    }
+  }
+
+  const handleOpenUploadDialog = (csr: CSRData) => {
+    setSelectedCSR(csr)
+    setUploadCertForm({ certificatePem: '', chainPem: '' })
+    setUploadedCertResult(null)
+    setShowUploadCertDialog(true)
+  }
+
+  const handleUploadCertificate = async () => {
+    if (!selectedCSR || !uploadCertForm.certificatePem.trim()) {
+      toast.error('Certificate PEM is required')
+      return
+    }
+    
+    setUploadingCert(true)
+    try {
+      const response = await fetch('/api/certificates/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: selectedCSR.type,
+          csrId: selectedCSR.dbId,
+          certificatePem: uploadCertForm.certificatePem,
+          chainPem: uploadCertForm.chainPem || undefined,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to upload certificate')
+      }
+
+      const result = await response.json()
+      setUploadedCertResult(result)
+      fetchCSRs()
+      toast.success('Certificate uploaded successfully')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to upload certificate')
+    } finally {
+      setUploadingCert(false)
+    }
+  }
+
   const truncateSerial = (serial: string, maxLength: number = 20) => {
     if (!serial) return '-'
     if (serial.length <= maxLength) return serial
     return serial.substring(0, maxLength) + '...'
+  }
+
+  const openCSRDialog = (type: 'server' | 'client') => {
+    setCsrForm(prev => ({ ...prev, type }))
+    setGeneratedCSR(null)
+    setShowCSRResult(false)
+    if (type === 'client') {
+      fetchVpnUsers()
+    }
+    setShowCSRDialog(true)
   }
 
   if (isLoading) {
@@ -352,8 +664,44 @@ export function PKIContent() {
     )
   }
 
+  const isExternalMode = data.ca?.isExternal
+
   return (
     <div className="space-y-6">
+      {/* Mode Switch Banner */}
+      <Alert className={isExternalMode ? 'border-amber-500/50 bg-amber-50 dark:bg-amber-950/20' : 'border-green-500/50 bg-green-50 dark:bg-green-950/20'}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {isExternalMode ? (
+              <Globe className="h-5 w-5 text-amber-600" />
+            ) : (
+              <KeyRound className="h-5 w-5 text-green-600" />
+            )}
+            <div>
+              <AlertTitle className={isExternalMode ? 'text-amber-800 dark:text-amber-200' : 'text-green-800 dark:text-green-200'}>
+                {isExternalMode ? 'MODE A: External CA' : 'MODE B: Managed PKI'}
+              </AlertTitle>
+              <AlertDescription className={isExternalMode ? 'text-amber-700 dark:text-amber-300' : 'text-green-700 dark:text-green-300'}>
+                {isExternalMode 
+                  ? 'Using customer-provided CA. Certificates must be signed externally.'
+                  : 'Self-hosted Certificate Authority. Full certificate lifecycle management.'}
+              </AlertDescription>
+            </div>
+          </div>
+          <Badge variant={isExternalMode ? 'secondary' : 'default'} className="ml-2">
+            {isExternalMode ? 'External' : 'Managed'}
+          </Badge>
+        </div>
+        {isExternalMode && (
+          <div className="mt-3 pt-3 border-t border-amber-500/30">
+            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 text-sm">
+              <AlertTriangle className="h-4 w-4" />
+              <span>Certificate signing is disabled. Use CSR Generator to request certificates from your external CA.</span>
+            </div>
+          </div>
+        )}
+      </Alert>
+
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -363,9 +711,11 @@ export function PKIContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={data.mode === 'MANAGED' ? 'default' : 'secondary'}>
-            {data.mode === 'MANAGED' ? 'Managed PKI' : 'External CA'}
-          </Badge>
+          {data.ca && (
+            <Badge variant={isExternalMode ? 'secondary' : 'default'}>
+              {isExternalMode ? 'External CA' : 'Managed PKI'}
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -376,7 +726,7 @@ export function PKIContent() {
         ) : (
           <XCircle className="h-4 w-4" />
         )}
-        <AlertTitle>OpenSSL Status</AlertTitle>
+        <AlertTitle>PKI Tools Status</AlertTitle>
         <AlertDescription>
           {data.openssl.available
             ? `OpenSSL is available: ${data.openssl.version}`
@@ -419,6 +769,7 @@ export function PKIContent() {
           <TabsTrigger value="ca">Certificate Authority</TabsTrigger>
           <TabsTrigger value="server-certs">Server Certificates</TabsTrigger>
           <TabsTrigger value="crl">CRL Management</TabsTrigger>
+          <TabsTrigger value="csr">CSR Generator</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -430,9 +781,13 @@ export function PKIContent() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <KeyRound className="h-5 w-5" />
-                    Root CA Certificate
+                    {data.ca.isExternal ? 'External CA Certificate' : 'Root CA Certificate'}
                   </CardTitle>
-                  <CardDescription>Your managed Root CA certificate details</CardDescription>
+                  <CardDescription>
+                    {data.ca.isExternal 
+                      ? 'Customer-provided CA certificate for VPN authentication'
+                      : 'Your managed Root CA certificate details'}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -468,6 +823,14 @@ export function PKIContent() {
                     </div>
                   </div>
 
+                  {/* Show CRL URL for External CA */}
+                  {data.ca.isExternal && data.ca.crlUrl && (
+                    <div className="text-sm">
+                      <p className="text-muted-foreground">CRL URL</p>
+                      <p className="font-mono text-xs break-all">{data.ca.crlUrl}</p>
+                    </div>
+                  )}
+
                   <div className="flex gap-2 flex-wrap">
                     <Button variant="outline" size="sm" onClick={handleExportCAChain}>
                       <Download className="mr-2 h-4 w-4" />
@@ -486,22 +849,26 @@ export function PKIContent() {
                       )}
                       Deploy
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setShowRegenerateDialog(true)}
-                    >
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Regenerate
-                    </Button>
-                    <Button 
-                      variant="destructive" 
-                      size="sm" 
-                      onClick={() => setShowDeleteDialog(true)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </Button>
+                    {!data.ca.isExternal && (
+                      <>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setShowRegenerateDialog(true)}
+                        >
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Regenerate
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={() => setShowDeleteDialog(true)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -510,24 +877,26 @@ export function PKIContent() {
                 <CardHeader>
                   <CardTitle>CA Operations</CardTitle>
                   <CardDescription>
-                    Manage your certificate authority
+                    {data.ca.isExternal ? 'External CA management' : 'Manage your certificate authority'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-2">
-                    <Button 
-                      variant="outline" 
-                      className="justify-start" 
-                      onClick={handleRegenerateCRL}
-                      disabled={regeneratingCrl}
-                    >
-                      {regeneratingCrl ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                      )}
-                      Regenerate CRL
-                    </Button>
+                    {!data.ca.isExternal && (
+                      <Button 
+                        variant="outline" 
+                        className="justify-start" 
+                        onClick={handleRegenerateCRL}
+                        disabled={regeneratingCrl}
+                      >
+                        {regeneratingCrl ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                        )}
+                        Regenerate CRL
+                      </Button>
+                    )}
                     <Button 
                       variant="outline" 
                       className="justify-start" 
@@ -543,34 +912,88 @@ export function PKIContent() {
                     </Button>
                   </div>
 
+                  {/* Deployment Status */}
+                  {data.deployment && (
+                    <Alert>
+                      <ShieldCheck className="h-4 w-4" />
+                      <AlertTitle>Deployment Status</AlertTitle>
+                      <AlertDescription className="text-xs mt-2">
+                        <div className="flex gap-4">
+                          <span>CA: {data.deployment.caDeployed ? '✓' : '✗'}</span>
+                          <span>CRL: {data.deployment.crlDeployed ? '✓' : '✗'}</span>
+                          <span>Config: {data.deployment.configExists ? '✓' : '✗'}</span>
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <Alert>
                     <ShieldCheck className="h-4 w-4" />
                     <AlertTitle>CA Files Location</AlertTitle>
                     <AlertDescription className="text-xs font-mono mt-2">
                       <p>Cert: {data.ca.paths.certificatePath}</p>
-                      <p>Key:  {data.ca.paths.keyPath}</p>
+                      {!data.ca.isExternal && <p>Key:  {data.ca.paths.keyPath}</p>}
                     </AlertDescription>
                   </Alert>
                 </CardContent>
               </Card>
             </div>
           ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Initialize Certificate Authority</CardTitle>
-                <CardDescription>
-                  No CA found. Initialize a new Root CA to start issuing certificates.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-center py-8">
-                  <Button size="lg" onClick={() => setShowInitDialog(true)}>
-                    <Plus className="mr-2 h-5 w-5" />
+            <div className="grid gap-4 lg:grid-cols-2">
+              {/* Managed PKI Option */}
+              <Card className="border-2 hover:border-primary/50 transition-colors">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <KeyRound className="h-5 w-5" />
+                    MODE B: Managed PKI
+                  </CardTitle>
+                  <CardDescription>
+                    Self-hosted Certificate Authority - Full control over certificate lifecycle
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>✓ Generate and manage your own Root CA</li>
+                    <li>✓ Issue server and client certificates</li>
+                    <li>✓ Password-protected PKCS#12 (.pfx) export</li>
+                    <li>✓ Automatic CRL generation</li>
+                    <li>✓ Certificate revocation handling</li>
+                    <li>✓ Expiry monitoring</li>
+                  </ul>
+                  <Button className="w-full" onClick={() => setShowInitDialog(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
                     Initialize Root CA
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {/* External CA Option */}
+              <Card className="border-2 hover:border-primary/50 transition-colors">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="h-5 w-5" />
+                    MODE A: External CA
+                  </CardTitle>
+                  <CardDescription>
+                    Use customer's existing PKI infrastructure
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>✓ Upload existing Root CA (PEM)</li>
+                    <li>✓ Upload Intermediate CA (optional)</li>
+                    <li>✓ Configure CRL (file or URL)</li>
+                    <li>✓ Generate Certificate Signing Requests (CSR)</li>
+                    <li>✓ Upload signed server certificates</li>
+                    <li>✓ CRL auto-fetch scheduler</li>
+                  </ul>
+                  <Button className="w-full" variant="outline" onClick={() => setShowExternalCADialog(true)}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import External CA
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </TabsContent>
 
@@ -639,19 +1062,21 @@ export function PKIContent() {
                     </div>
 
                     <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        className="flex-1" 
-                        onClick={handleRegenerateCRL}
-                        disabled={regeneratingCrl}
-                      >
-                        {regeneratingCrl ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <RefreshCw className="mr-2 h-4 w-4" />
-                        )}
-                        Regenerate CRL
-                      </Button>
+                      {!data.ca?.isExternal && (
+                        <Button 
+                          variant="outline" 
+                          className="flex-1" 
+                          onClick={handleRegenerateCRL}
+                          disabled={regeneratingCrl}
+                        >
+                          {regeneratingCrl ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                          )}
+                          Regenerate CRL
+                        </Button>
+                      )}
                       <Button 
                         variant="outline" 
                         className="flex-1" 
@@ -714,6 +1139,138 @@ export function PKIContent() {
           </div>
         </TabsContent>
 
+        {/* CSR Generator Tab */}
+        <TabsContent value="csr" className="space-y-4">
+          {!data.ca ? (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>CA Required</AlertTitle>
+              <AlertDescription>
+                Please initialize or import a CA first to generate CSRs.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">Certificate Signing Requests</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Generate CSRs for external signing or upload signed certificates
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={() => openCSRDialog('server')}>
+                    <Server className="mr-2 h-4 w-4" />
+                    Generate Server CSR
+                  </Button>
+                  <Button variant="outline" onClick={() => openCSRDialog('client')}>
+                    <User className="mr-2 h-4 w-4" />
+                    Generate Client CSR
+                  </Button>
+                </div>
+              </div>
+
+              {/* Pending CSRs List */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Pending CSRs</CardTitle>
+                  <CardDescription>
+                    CSRs awaiting external signing and certificate upload
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {csrsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : csrs.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileKey className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>No pending CSRs</p>
+                      <p className="text-sm mt-1">Generate a CSR to request a certificate from your external CA</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {csrs.map((csr) => (
+                        <div 
+                          key={csr.dbId}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border bg-card"
+                        >
+                          <div className="flex items-start gap-3">
+                            {csr.type === 'server' ? (
+                              <Server className="h-5 w-5 text-muted-foreground mt-0.5" />
+                            ) : (
+                              <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+                            )}
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{csr.commonName}</p>
+                                <Badge variant="outline" className="text-xs">
+                                  {csr.type}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">{csr.subject}</p>
+                              <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
+                                <span>Key: {csr.keySize} bits</span>
+                                <span>•</span>
+                                <span>Created: {new Date(csr.createdAt).toLocaleString()}</span>
+                              </div>
+                              {csr.sanDomains && csr.sanDomains.length > 0 && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  SANs: {csr.sanDomains.join(', ')}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-2 mt-3 sm:mt-0">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleDownloadCSR(csr, 'csr')}
+                            >
+                              <Download className="mr-1 h-3 w-3" />
+                              CSR
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleOpenUploadDialog(csr)}
+                            >
+                              <Upload className="mr-1 h-3 w-3" />
+                              Upload Cert
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDeleteCSR(csr)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* CSR Info */}
+              <Alert>
+                <FileKey className="h-4 w-4" />
+                <AlertTitle>How CSR Workflow Works</AlertTitle>
+                <AlertDescription>
+                  <ol className="list-decimal list-inside space-y-1 mt-2 text-sm">
+                    <li>Generate a CSR for server or client certificate</li>
+                    <li>Download the CSR and send it to your external CA for signing</li>
+                    <li>Upload the signed certificate using the "Upload Cert" button</li>
+                    <li>The certificate will be deployed to strongSwan automatically</li>
+                  </ol>
+                </AlertDescription>
+              </Alert>
+            </>
+          )}
+        </TabsContent>
+
         {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-4">
           <Card>
@@ -750,10 +1307,7 @@ export function PKIContent() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">1 Day</SelectItem>
-                    <SelectItem value="7">1 Week</SelectItem>
                     <SelectItem value="30">1 Month</SelectItem>
-                    <SelectItem value="60">2 Months</SelectItem>
                     <SelectItem value="90">3 Months</SelectItem>
                     <SelectItem value="180">6 Months</SelectItem>
                     <SelectItem value="365">1 Year</SelectItem>
@@ -773,12 +1327,10 @@ export function PKIContent() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="30">1 Month</SelectItem>
-                    <SelectItem value="90">3 Months</SelectItem>
-                    <SelectItem value="180">6 Months</SelectItem>
                     <SelectItem value="365">1 Year</SelectItem>
                     <SelectItem value="730">2 Years</SelectItem>
                     <SelectItem value="1095">3 Years</SelectItem>
+                    <SelectItem value="1825">5 Years</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -838,36 +1390,6 @@ export function PKIContent() {
               </Button>
             </CardContent>
           </Card>
-
-          {/* Path Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle>PKI Path Status</CardTitle>
-              <CardDescription>File and directory status</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {data.paths.map((pathItem, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
-                    <div>
-                      <p className="font-medium">{pathItem.name}</p>
-                      <p className="text-xs text-muted-foreground font-mono">{pathItem.path}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {pathItem.permissions && (
-                        <span className="text-xs text-muted-foreground">{pathItem.permissions}</span>
-                      )}
-                      {pathItem.exists ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <XCircle className="h-4 w-4 text-gray-400" />
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
 
@@ -875,17 +1397,17 @@ export function PKIContent() {
       <Dialog open={showInitDialog} onOpenChange={setShowInitDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Initialize New Root CA</DialogTitle>
+            <DialogTitle>Initialize New Root CA (Managed PKI)</DialogTitle>
             <DialogDescription>
               Create a new self-signed Root CA for certificate signing.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="ca-name">CA Name</Label>
+              <Label htmlFor="ca-name">CA Name (Common Name)</Label>
               <Input
                 id="ca-name"
-                placeholder="VPN Root CA"
+                placeholder="24online VPN Root CA"
                 value={initForm.name}
                 onChange={(e) => setInitForm({ ...initForm, name: e.target.value })}
               />
@@ -895,7 +1417,7 @@ export function PKIContent() {
                 <Label htmlFor="country">Country</Label>
                 <Input
                   id="country"
-                  placeholder="US"
+                  placeholder="IN"
                   maxLength={2}
                   value={initForm.country}
                   onChange={(e) => setInitForm({ ...initForm, country: e.target.value.toUpperCase() })}
@@ -905,7 +1427,7 @@ export function PKIContent() {
                 <Label htmlFor="organization">Organization</Label>
                 <Input
                   id="organization"
-                  placeholder="Company Inc."
+                  placeholder="24online"
                   value={initForm.organization}
                   onChange={(e) => setInitForm({ ...initForm, organization: e.target.value })}
                 />
@@ -950,6 +1472,93 @@ export function PKIContent() {
         </DialogContent>
       </Dialog>
 
+      {/* Import External CA Dialog */}
+      <Dialog open={showExternalCADialog} onOpenChange={setShowExternalCADialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Import External CA (Customer CA)</DialogTitle>
+            <DialogDescription>
+              Import an existing CA certificate from your organization's PKI infrastructure.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="ext-ca-name">CA Name</Label>
+              <Input
+                id="ext-ca-name"
+                placeholder="Customer Root CA"
+                value={externalCAForm.name}
+                onChange={(e) => setExternalCAForm({ ...externalCAForm, name: e.target.value })}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="ca-pem">Root CA Certificate (PEM format)</Label>
+              <Textarea
+                id="ca-pem"
+                placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
+                value={externalCAForm.certificatePem}
+                onChange={(e) => setExternalCAForm({ ...externalCAForm, certificatePem: e.target.value })}
+                rows={6}
+                className="font-mono text-xs"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="intermediate-pem">Intermediate CA Certificate (Optional)</Label>
+              <Textarea
+                id="intermediate-pem"
+                placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
+                value={externalCAForm.intermediatePem}
+                onChange={(e) => setExternalCAForm({ ...externalCAForm, intermediatePem: e.target.value })}
+                rows={6}
+                className="font-mono text-xs"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="crl-url">CRL URL (Optional)</Label>
+                <Input
+                  id="crl-url"
+                  placeholder="http://pki.example.com/crl/ca.crl"
+                  value={externalCAForm.crlUrl}
+                  onChange={(e) => setExternalCAForm({ ...externalCAForm, crlUrl: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="crl-pem">Or Upload CRL (PEM)</Label>
+                <Textarea
+                  id="crl-pem"
+                  placeholder="-----BEGIN X509 CRL-----&#10;...&#10;-----END X509 CRL-----"
+                  value={externalCAForm.crlPem}
+                  onChange={(e) => setExternalCAForm({ ...externalCAForm, crlPem: e.target.value })}
+                  rows={4}
+                  className="font-mono text-xs"
+                />
+              </div>
+            </div>
+            
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Note</AlertTitle>
+              <AlertDescription>
+                With External CA mode, you cannot issue certificates directly. 
+                Use the CSR generation feature to request certificates from your CA.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExternalCADialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleImportExternalCA} disabled={isSubmitting}>
+              {isSubmitting ? 'Importing...' : 'Import CA'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Regenerate CA Dialog */}
       <Dialog open={showRegenerateDialog} onOpenChange={setShowRegenerateDialog}>
         <DialogContent>
@@ -972,7 +1581,6 @@ export function PKIContent() {
               <Label htmlFor="regen-ca-name">CA Name</Label>
               <Input
                 id="regen-ca-name"
-                placeholder="VPN Root CA"
                 value={initForm.name}
                 onChange={(e) => setInitForm({ ...initForm, name: e.target.value })}
               />
@@ -999,7 +1607,6 @@ export function PKIContent() {
                   <SelectContent>
                     <SelectItem value="1825">5 years</SelectItem>
                     <SelectItem value="3650">10 years</SelectItem>
-                    <SelectItem value="7300">20 years</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1039,6 +1646,347 @@ export function PKIContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Generate CSR Dialog */}
+      <Dialog open={showCSRDialog} onOpenChange={setShowCSRDialog}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>
+              Generate {csrForm.type === 'server' ? 'Server' : 'Client'} CSR
+            </DialogTitle>
+            <DialogDescription>
+              Create a Certificate Signing Request to be signed by your external CA.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <Select 
+                  value={csrForm.type} 
+                  onValueChange={(v) => setCsrForm({ ...csrForm, type: v as 'server' | 'client' })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="server">Server Certificate</SelectItem>
+                    <SelectItem value="client">Client Certificate</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="csr-cn">Common Name *</Label>
+                <Input
+                  id="csr-cn"
+                  placeholder={csrForm.type === 'server' ? 'vpn.example.com' : 'john.doe'}
+                  value={csrForm.commonName}
+                  onChange={(e) => setCsrForm({ ...csrForm, commonName: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {csrForm.type === 'server' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="san-domains">SAN Domains (comma-separated)</Label>
+                  <Input
+                    id="san-domains"
+                    placeholder="vpn.example.com, vpn2.example.com"
+                    value={csrForm.sanDomains}
+                    onChange={(e) => setCsrForm({ ...csrForm, sanDomains: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="san-ips">SAN IPs (comma-separated)</Label>
+                  <Input
+                    id="san-ips"
+                    placeholder="192.168.1.1, 10.0.0.1"
+                    value={csrForm.sanIPs}
+                    onChange={(e) => setCsrForm({ ...csrForm, sanIPs: e.target.value })}
+                  />
+                </div>
+              </>
+            )}
+
+            {csrForm.type === 'client' && (
+              <div className="space-y-2">
+                <Label htmlFor="user-select">User</Label>
+                <Select 
+                  value={csrForm.userId} 
+                  onValueChange={(v) => setCsrForm({ ...csrForm, userId: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a user" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vpnUsers.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.username} ({user.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="csr-keysize">Key Size</Label>
+                <Select 
+                  value={csrForm.keySize} 
+                  onValueChange={(v) => setCsrForm({ ...csrForm, keySize: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2048">2048 bits</SelectItem>
+                    <SelectItem value="4096">4096 bits</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="csr-org">Organization</Label>
+                <Input
+                  id="csr-org"
+                  placeholder="My Company"
+                  value={csrForm.organization}
+                  onChange={(e) => setCsrForm({ ...csrForm, organization: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="csr-country">Country</Label>
+                <Input
+                  id="csr-country"
+                  placeholder="US"
+                  maxLength={2}
+                  value={csrForm.country}
+                  onChange={(e) => setCsrForm({ ...csrForm, country: e.target.value.toUpperCase() })}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCSRDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleGenerateCSR} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <FileKey className="mr-2 h-4 w-4" />
+                  Generate CSR
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CSR Result Dialog */}
+      <Dialog open={showCSRResult} onOpenChange={setShowCSRResult}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              CSR Generated Successfully
+            </DialogTitle>
+            <DialogDescription>
+              Your Certificate Signing Request has been generated. Send the CSR to your CA for signing.
+            </DialogDescription>
+          </DialogHeader>
+          {generatedCSR && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Type</p>
+                  <p className="font-medium capitalize">{generatedCSR.type}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Common Name</p>
+                  <p className="font-medium">{generatedCSR.commonName}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>CSR (PEM)</Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleCopyToClipboard(generatedCSR.csrPem, 'CSR')}
+                  >
+                    <Copy className="mr-1 h-3 w-3" />
+                    Copy
+                  </Button>
+                </div>
+                <Textarea
+                  value={generatedCSR.csrPem}
+                  readOnly
+                  rows={8}
+                  className="font-mono text-xs"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => window.open(generatedCSR.download.csr, '_blank')}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download CSR
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => window.open(generatedCSR.download.key, '_blank')}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Key
+                </Button>
+              </div>
+
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Important</AlertTitle>
+                <AlertDescription className="text-sm">
+                  Keep the private key secure! After uploading the signed certificate, the key will be used to create the PKCS#12 bundle.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setShowCSRResult(false)}>
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Signed Certificate Dialog */}
+      <Dialog open={showUploadCertDialog} onOpenChange={setShowUploadCertDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Upload Signed Certificate</DialogTitle>
+            <DialogDescription>
+              Upload the certificate signed by your external CA for CSR: {selectedCSR?.commonName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {!uploadedCertResult ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="cert-pem">Signed Certificate (PEM) *</Label>
+                  <Textarea
+                    id="cert-pem"
+                    placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
+                    value={uploadCertForm.certificatePem}
+                    onChange={(e) => setUploadCertForm({ ...uploadCertForm, certificatePem: e.target.value })}
+                    rows={8}
+                    className="font-mono text-xs"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="chain-pem">Certificate Chain (Optional)</Label>
+                  <Textarea
+                    id="chain-pem"
+                    placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
+                    value={uploadCertForm.chainPem}
+                    onChange={(e) => setUploadCertForm({ ...uploadCertForm, chainPem: e.target.value })}
+                    rows={6}
+                    className="font-mono text-xs"
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4">
+                <Alert className="border-green-500">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <AlertTitle>Success!</AlertTitle>
+                  <AlertDescription>
+                    Certificate uploaded and deployed successfully.
+                  </AlertDescription>
+                </Alert>
+                
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Serial Number</p>
+                    <p className="font-mono text-xs">{uploadedCertResult.certificate.serialNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Common Name</p>
+                    <p className="font-medium">{uploadedCertResult.certificate.commonName}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Expires</p>
+                    <p className="font-medium">
+                      {new Date(uploadedCertResult.certificate.expiryDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Status</p>
+                    <Badge variant={uploadedCertResult.certificate.status === 'ACTIVE' ? 'default' : 'destructive'}>
+                      {uploadedCertResult.certificate.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleDeployToStrongSwan}
+                    disabled={deploying}
+                  >
+                    {deploying ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                    )}
+                    Deploy to strongSwan
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            {!uploadedCertResult ? (
+              <>
+                <Button variant="outline" onClick={() => setShowUploadCertDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUploadCertificate} disabled={uploadingCert}>
+                  {uploadingCert ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Certificate
+                    </>
+                  )}
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => {
+                setShowUploadCertDialog(false)
+                setUploadedCertResult(null)
+                setSelectedCSR(null)
+              }}>
+                Done
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
