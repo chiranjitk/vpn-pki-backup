@@ -1,6 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useAuth } from '@/hooks/use-auth'
+import { AppLayout } from '@/components/layout/app-layout'
+import { LoginPage } from '@/components/auth/login-page'
+import { Loader2 } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -29,15 +33,12 @@ import {
 } from '@/components/ui/table'
 import {
   FileText,
-  Download,
   Search,
-  Calendar,
   Users,
   Clock,
   ArrowDownToLine,
   ArrowUpFromLine,
   Activity,
-  Loader2,
   BarChart3,
   FileSpreadsheet,
   FileDown,
@@ -99,11 +100,12 @@ function formatDate(date: string): string {
   return new Date(date).toLocaleString()
 }
 
-export default function ReportsPage() {
+function ReportsContent() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [stats, setStats] = useState<SessionStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [syncing, setSyncing] = useState(false)
   
   // Filters
   const [startDate, setStartDate] = useState('')
@@ -111,22 +113,41 @@ export default function ReportsPage() {
   const [username, setUsername] = useState('')
   const [ipAddress, setIpAddress] = useState('')
   const [status, setStatus] = useState('all')
-  const [country, setCountry] = useState('')
+  const [country, setCountry] = useState('all')
   
   // Available filter options
   const [countries, setCountries] = useState<string[]>([])
-  const [usernames, setUsernames] = useState<string[]>([])
 
-  const fetchSessions = async () => {
+  const syncSessions = async () => {
+    setSyncing(true)
+    try {
+      const response = await fetch('/api/vpn-sessions/sync', { method: 'POST' })
+      if (response.ok) {
+        const data = await response.json()
+        toast.success(data.message || 'Sessions synced successfully')
+      }
+    } catch (error) {
+      console.error('Error syncing sessions:', error)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  const fetchSessions = async (syncFirst = false) => {
     setLoading(true)
     try {
+      // Optionally sync sessions first
+      if (syncFirst) {
+        await syncSessions()
+      }
+
       const params = new URLSearchParams()
       if (startDate) params.append('startDate', startDate)
       if (endDate) params.append('endDate', endDate)
       if (username) params.append('username', username)
       if (ipAddress) params.append('clientIp', ipAddress)
       if (status !== 'all') params.append('status', status)
-      if (country) params.append('country', country)
+      if (country !== 'all') params.append('country', country)
       params.append('limit', '100')
 
       const response = await fetch(`/api/reports/sessions?${params}`)
@@ -138,9 +159,7 @@ export default function ReportsPage() {
         // Extract unique values for filters
         if (data.sessions) {
           const uniqueCountries = [...new Set(data.sessions.map((s: Session) => s.clientCountry).filter(Boolean))]
-          const uniqueUsernames = [...new Set(data.sessions.map((s: Session) => s.username))]
           setCountries(uniqueCountries as string[])
-          setUsernames(uniqueUsernames as string[])
         }
       }
     } catch (error) {
@@ -152,7 +171,7 @@ export default function ReportsPage() {
   }
 
   useEffect(() => {
-    fetchSessions()
+    fetchSessions(true) // Sync on initial load
   }, [])
 
   const handleFilter = () => {
@@ -165,7 +184,7 @@ export default function ReportsPage() {
     setUsername('')
     setIpAddress('')
     setStatus('all')
-    setCountry('')
+    setCountry('all')
     setTimeout(fetchSessions, 100)
   }
 
@@ -178,7 +197,7 @@ export default function ReportsPage() {
       if (username) params.append('username', username)
       if (ipAddress) params.append('clientIp', ipAddress)
       if (status !== 'all') params.append('status', status)
-      if (country) params.append('country', country)
+      if (country !== 'all') params.append('country', country)
       params.append('format', 'csv')
 
       const response = await fetch(`/api/reports/sessions?${params}`)
@@ -213,7 +232,7 @@ export default function ReportsPage() {
       if (username) params.append('username', username)
       if (ipAddress) params.append('clientIp', ipAddress)
       if (status !== 'all') params.append('status', status)
-      if (country) params.append('country', country)
+      if (country !== 'all') params.append('country', country)
       params.append('format', 'pdf')
 
       const response = await fetch(`/api/reports/sessions?${params}`)
@@ -261,6 +280,10 @@ export default function ReportsPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => fetchSessions(true)} disabled={syncing || loading}>
+            {syncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Activity className="mr-2 h-4 w-4" />}
+            Sync Sessions
+          </Button>
           <Button variant="outline" onClick={exportCSV} disabled={exporting || sessions.length === 0}>
             {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
             Export CSV
@@ -396,7 +419,7 @@ export default function ReportsPage() {
                   <SelectValue placeholder="All countries" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Countries</SelectItem>
+                  <SelectItem value="all">All Countries</SelectItem>
                   {countries.map((c) => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
@@ -426,8 +449,8 @@ export default function ReportsPage() {
                 {sessions.length} sessions found
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={fetchSessions}>
-              <Activity className="mr-2 h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={() => fetchSessions(true)} disabled={syncing || loading}>
+              {syncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Activity className="mr-2 h-4 w-4" />}
               Refresh
             </Button>
           </div>
@@ -560,5 +583,36 @@ export default function ReportsPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function ReportsPage() {
+  const { isAuthenticated } = useAuth()
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setHydrated(true), 0)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Show loading while hydrating from localStorage
+  if (!hydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return <LoginPage />
+  }
+
+  // Show reports with layout if authenticated
+  return (
+    <AppLayout>
+      <ReportsContent />
+    </AppLayout>
   )
 }

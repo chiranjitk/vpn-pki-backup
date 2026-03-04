@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       where.status = status as any
     }
     
-    if (country) {
+    if (country && country !== 'all') {
       where.clientCountry = country
     }
     
