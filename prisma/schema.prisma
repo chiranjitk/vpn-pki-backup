@@ -84,6 +84,8 @@ model Certificate {
   expiryDate      DateTime
   status          CertificateStatus @default(ACTIVE)
   certificatePath String?
+  keyPath         String?  // Private key path
+  csrPath         String?  // CSR path for external signing
   pfxPath         String?
   pfxPassword     String?
   keySize         Int      @default(4096)
@@ -484,48 +486,220 @@ model ApiKey {
 
 model VpnConfiguration {
   id                    String   @id @default(cuid())
-  
+
   // Connection Settings
   connectionName        String   @default("ikev2-cert")
   ikeVersion            Int      @default(2)
-  
+
   // IKE Proposals (comma-separated, e.g., "aes256-sha256-modp1024")
   ikeProposals          String   @default("aes256-sha256-modp1024")
-  
+
   // ESP Proposals (comma-separated, e.g., "aes256-sha1,aes256-sha256")
   espProposals          String   @default("aes256-sha1,aes256-sha256")
-  
+
   // Local Settings
   localAuth             String   @default("pubkey")
   localCert             String   @default("vpn-server.pem")
   localId               String?
-  
+
   // Remote Settings
   remoteAuth            String   @default("pubkey")
   remoteCaId            String?
-  
+
   // IP Pool Settings
   poolName              String   @default("vpn-pool")
   poolAddressRange      String   @default("10.70.0.0/24")
   dnsServers            String   @default("8.8.8.8")
-  
+
   // Traffic Selectors
   localTrafficSelector  String   @default("0.0.0.0/0")
   remoteTrafficSelector String   @default("dynamic")
-  
+
   // Additional Options
   mobike                Boolean  @default(true)
   fragmentation         Boolean  @default(true)
   reauthTime            Int      @default(0)
   dpdAction             String   @default("restart")
   startAction           String   @default("none")
-  
+
   // Server Identity
   serverHostnames       String?  // Comma-separated hostnames/IPs
-  
+
   // Timestamps
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
   @@index([connectionName])
+}
+
+// ============================================
+// RADIUS CONFIGURATION
+// ============================================
+
+model RadiusConfiguration {
+  id                  String   @id @default(cuid())
+  host                String
+  port                Int      @default(1812)
+  secret              String
+  timeout             Int      @default(5)
+  accountingEnabled   Boolean  @default(false)
+  accountingPort      Int      @default(1813)
+  isEnabled           Boolean  @default(false)
+  lastTestAt          DateTime?
+  lastTestSuccess     Boolean?
+  lastTestError       String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// ============================================
+// LDAP CONFIGURATION
+// ============================================
+
+model LdapConfiguration {
+  id                  String   @id @default(cuid())
+  serverUrl           String
+  bindDn              String?
+  bindPassword        String?
+  baseDn              String
+  userFilter          String   @default("(objectClass=person)")
+  groupFilter         String   @default("(objectClass=group)")
+  usernameAttribute   String   @default("sAMAccountName")
+  emailAttribute      String   @default("mail")
+  useTls              Boolean  @default(true)
+  isEnabled           Boolean  @default(false)
+  lastSyncAt          DateTime?
+  lastSyncSuccess     Boolean?
+  lastSyncError       String?
+  syncInterval        Int      @default(60)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// ============================================
+// GEO/IP RESTRICTIONS
+// ============================================
+
+model GeoIpRestriction {
+  id            String              @id @default(cuid())
+  type          GeoIpRestrictionType
+  value         String
+  description   String?
+  action        RestrictionAction   @default(BLOCK)
+  isEnabled     Boolean             @default(true)
+  source        String              @default("manual")
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([type])
+  @@index([action])
+  @@index([isEnabled])
+}
+
+enum GeoIpRestrictionType {
+  COUNTRY
+  IP_ADDRESS
+  IP_RANGE
+  ASN
+}
+
+enum RestrictionAction {
+  BLOCK
+  ALLOW
+}
+
+// ============================================
+// GUEST USERS
+// ============================================
+
+model GuestUser {
+  id              String            @id @default(cuid())
+  username        String            @unique
+  email           String
+  fullName        String?
+  phone           String?
+  company         String?
+  purpose         String?
+  sponsoredBy     String?
+  validFrom       DateTime
+  validUntil      DateTime
+  status          GuestUserStatus   @default(PENDING)
+  certificateId   String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([username])
+  @@index([status])
+  @@index([validUntil])
+}
+
+enum GuestUserStatus {
+  PENDING
+  APPROVED
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+// ============================================
+// VPN SESSIONS
+// ============================================
+
+model VpnSession {
+  id              String            @id @default(cuid())
+  username        String
+  certificateId   String?
+  sourceIp        String
+  destIp          String?
+  bytesIn         Int               @default(0)
+  bytesOut        Int               @default(0)
+  connectedAt     DateTime          @default(now())
+  disconnectedAt  DateTime?
+  duration        Int?
+  status          VpnSessionStatus  @default(ACTIVE)
+  createdAt       DateTime          @default(now())
+
+  @@index([username])
+  @@index([status])
+  @@index([connectedAt])
+}
+
+enum VpnSessionStatus {
+  ACTIVE
+  DISCONNECTED
+  TIMEOUT
+  ERROR
+}
+
+// ============================================
+// SIEM INTEGRATION
+// ============================================
+
+model SiemIntegration {
+  id              String            @id @default(cuid())
+  name            String
+  type            SiemType
+  endpoint        String
+  apiKey          String?
+  format          String            @default("JSON")
+  isEnabled       Boolean           @default(false)
+  lastSentAt      DateTime?
+  lastSuccess     Boolean?
+  lastError       String?
+  eventsSent      Int               @default(0)
+  filters         String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([type])
+  @@index([isEnabled])
+}
+
+enum SiemType {
+  SPLUNK
+  ELK
+  QRADAR
+  SYSLOG
+  WEBHOOK
+  CUSTOM
 }

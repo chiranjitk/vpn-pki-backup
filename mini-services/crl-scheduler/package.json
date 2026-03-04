@@ -1,0 +1,10 @@
+{
+  "name": "crl-scheduler",
+  "version": "1.0.0",
+  "description": "CRL Auto-fetch Scheduler Service for VPN PKI Management",
+  "scripts": {
+    "dev": "bun --hot index.ts",
+    "start": "bun index.ts"
+  },
+  "dependencies": {}
+}

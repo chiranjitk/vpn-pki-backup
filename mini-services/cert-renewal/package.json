@@ -1,0 +1,7 @@
+{
+  "name": "cert-renewal",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "bun --hot index.ts"
+  }
+}
