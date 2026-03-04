@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 // 24online VPN Server - Sidebar Navigation with Expandable Groups
+=======
+// 24online VPN Server - Sidebar Navigation
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 'use client'
 
 import Link from 'next/link'
@@ -15,6 +19,7 @@ import {
   Server,
   ChevronLeft,
   ChevronRight,
+<<<<<<< HEAD
   ChevronDown,
   LogOut,
   User,
@@ -33,6 +38,11 @@ import {
   Sparkles,
   CircleDot,
   BarChart3,
+=======
+  LogOut,
+  User,
+  Globe,
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -43,14 +53,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+<<<<<<< HEAD
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useHydrated } from '@/hooks/use-local-storage'
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
 }
 
+<<<<<<< HEAD
 interface NavItem {
   name: string
   href: string
@@ -150,10 +164,70 @@ const navigationGroups: NavGroup[] = [
 // LocalStorage key for persisting sidebar state
 const SIDEBAR_STATE_KEY = 'vpn-pki-sidebar-state'
 
+=======
+const navigation = [
+  {
+    name: 'Dashboard',
+    href: '/',
+    icon: LayoutDashboard,
+    description: 'Overview and statistics',
+  },
+  {
+    name: 'VPN Users',
+    href: '/users',
+    icon: Users,
+    description: 'Manage VPN user accounts',
+  },
+  {
+    name: 'Certificates',
+    href: '/certificates',
+    icon: FileKey,
+    description: 'Certificate lifecycle management',
+  },
+  {
+    name: 'Server Certificates',
+    href: '/server-certificates',
+    icon: Server,
+    description: 'VPN server certificate management',
+  },
+  {
+    name: 'PKI Management',
+    href: '/pki',
+    icon: KeyRound,
+    description: 'CA and PKI configuration',
+  },
+  {
+    name: 'Revocation',
+    href: '/revocation',
+    icon: ShieldCheck,
+    description: 'Certificate revocation & CRL',
+  },
+  {
+    name: 'VPN Integration',
+    href: '/vpn',
+    icon: Globe,
+    description: 'strongSwan configuration',
+  },
+  {
+    name: 'Audit Logs',
+    href: '/audit',
+    icon: History,
+    description: 'System activity logs',
+  },
+  {
+    name: 'Settings',
+    href: '/settings',
+    icon: Settings,
+    description: 'System configuration',
+  },
+]
+
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const { user, logout } = useAuth()
 
+<<<<<<< HEAD
   // Track hydration state
   const hydrated = useHydrated()
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
@@ -221,15 +295,22 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
   // Use expandedGroups directly (user has full control, but active group is auto-added)
   const effectiveExpandedGroups = expandedGroups
 
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   return (
     <TooltipProvider delayDuration={0}>
       <div
         className={cn(
+<<<<<<< HEAD
           'flex h-full flex-col border-r border-border/50 bg-gradient-to-b from-card to-card/95 backdrop-blur-sm transition-all duration-300 ease-in-out',
+=======
+          'flex h-full flex-col border-r bg-card transition-all duration-300',
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           collapsed ? 'w-16' : 'w-64'
         )}
       >
         {/* Header */}
+<<<<<<< HEAD
         <div className="flex h-14 items-center justify-between border-b border-border/50 px-3 bg-gradient-to-r from-primary/5 to-transparent">
           {!collapsed && (
             <div className="flex items-center gap-2.5">
@@ -239,11 +320,26 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
               <div className="flex flex-col">
                 <span className="font-bold text-sm leading-tight tracking-tight">24online</span>
                 <span className="text-[10px] text-muted-foreground leading-tight">VPN Server</span>
+=======
+        <div className="flex h-16 items-center justify-between border-b px-4">
+          {!collapsed && (
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <Globe className="h-5 w-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold text-sm leading-tight">24online</span>
+                <span className="text-xs text-muted-foreground leading-tight">VPN Server</span>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
               </div>
             </div>
           )}
           {collapsed && (
+<<<<<<< HEAD
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/25 mx-auto">
+=======
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground mx-auto">
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
               <Globe className="h-5 w-5" />
             </div>
           )}
@@ -251,10 +347,14 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
             variant="ghost"
             size="icon"
             onClick={onToggle}
+<<<<<<< HEAD
             className={cn(
               'h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors',
               collapsed && 'mx-auto mt-1'
             )}
+=======
+            className={cn('h-8 w-8', collapsed && 'mx-auto mt-2')}
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           >
             {collapsed ? (
               <ChevronRight className="h-4 w-4" />
@@ -264,6 +364,7 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
           </Button>
         </div>
 
+<<<<<<< HEAD
         {/* Navigation - Scrollable */}
         <ScrollArea className="flex-1 min-h-0">
           <nav className="space-y-0.5 p-2">
@@ -302,11 +403,46 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
                           ))}
                         </div>
                       </div>
+=======
+        {/* Navigation */}
+        <ScrollArea className="flex-1 py-4">
+          <nav className="space-y-1 px-2">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href
+              const Icon = item.icon
+              
+              const linkContent = (
+                <Link
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    collapsed && 'justify-center px-2'
+                  )}
+                >
+                  <Icon className="h-5 w-5 shrink-0" />
+                  {!collapsed && <span>{item.name}</span>}
+                </Link>
+              )
+
+              if (collapsed) {
+                return (
+                  <Tooltip key={item.href}>
+                    <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                    <TooltipContent side="right">
+                      <p className="font-medium">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.description}
+                      </p>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                     </TooltipContent>
                   </Tooltip>
                 )
               }
 
+<<<<<<< HEAD
               return (
                 <div 
                   key={group.name} 
@@ -376,16 +512,24 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
                   </div>
                 </div>
               )
+=======
+              return <div key={item.href}>{linkContent}</div>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             })}
           </nav>
         </ScrollArea>
 
         {/* User Section */}
+<<<<<<< HEAD
         <div className="border-t border-border/50 p-3 bg-gradient-to-r from-transparent to-primary/5">
+=======
+        <div className="border-t p-4">
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           {collapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="flex justify-center">
+<<<<<<< HEAD
                   <Button
                     variant="ghost"
                     size="icon"
@@ -405,10 +549,21 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
                     </p>
                   </div>
                 </div>
+=======
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <User className="h-5 w-5" />
+                  </div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p className="font-medium">{user?.username}</p>
+                <p className="text-xs text-muted-foreground">{user?.role}</p>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
               </TooltipContent>
             </Tooltip>
           ) : (
             <div className="flex items-center justify-between">
+<<<<<<< HEAD
               <div className="flex items-center gap-2.5">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 text-primary">
                   <User className="h-4 w-4" />
@@ -416,6 +571,15 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm font-medium truncate">{user?.username}</span>
                   <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{user?.role}</span>
+=======
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <User className="h-5 w-5" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{user?.username}</span>
+                  <span className="text-xs text-muted-foreground">{user?.role}</span>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                 </div>
               </div>
               <Tooltip>
@@ -424,7 +588,11 @@ export function AppSidebar({ collapsed, onToggle }: SidebarProps) {
                     variant="ghost"
                     size="icon"
                     onClick={logout}
+<<<<<<< HEAD
                     className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors"
+=======
+                    className="h-8 w-8"
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                   >
                     <LogOut className="h-4 w-4" />
                   </Button>

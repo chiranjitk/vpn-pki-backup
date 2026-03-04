@@ -66,8 +66,11 @@ import {
   AlertTriangle,
   Trash2,
   Copy,
+<<<<<<< HEAD
   Mail,
   Send,
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -328,6 +331,7 @@ export function CertificatesContent() {
     toast.info('Certificate renewal - generate a new certificate for this user')
   }
 
+<<<<<<< HEAD
   const handleSendEmail = async (cert: Certificate) => {
     if (!confirm(`Send certificate to ${cert.user?.email || cert.email}?`)) return
 
@@ -349,6 +353,8 @@ export function CertificatesContent() {
     }
   }
 
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   const handleRevoke = async (cert: Certificate) => {
     if (!confirm('Are you sure you want to revoke this certificate?')) return
 
@@ -550,10 +556,13 @@ export function CertificatesContent() {
                               <FileKey className="mr-2 h-4 w-4" />
                               Download PKCS#12
                             </DropdownMenuItem>
+<<<<<<< HEAD
                             <DropdownMenuItem onClick={() => handleSendEmail(cert)}>
                               <Mail className="mr-2 h-4 w-4" />
                               Send via Email
                             </DropdownMenuItem>
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                             {cert.status === 'ACTIVE' && (
                               <>
                                 <DropdownMenuSeparator />

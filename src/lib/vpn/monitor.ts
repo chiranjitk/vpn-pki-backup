@@ -207,6 +207,7 @@ export async function getVpnStatus(): Promise<VpnServiceStatus> {
 
 /**
  * Get list of active IKEv2 connections
+<<<<<<< HEAD
  * Parses swanctl --list-sas output format:
  * 
  * ikev2-cert: #1, ESTABLISHED, IKEv2, 7fc0e33c7b667510_i 654295c3f323f97b_r*
@@ -220,6 +221,8 @@ export async function getVpnStatus(): Promise<VpnServiceStatus> {
  *     out 14d38d54,   6997 bytes,    46 packets,    48s ago
  *     local  0.0.0.0/0
  *     remote 10.70.0.1/32
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
  */
 export async function getActiveConnections(): Promise<VpnConnection[]> {
   const connections: VpnConnection[] = []
@@ -239,17 +242,27 @@ export async function getActiveConnections(): Promise<VpnConnection[]> {
     let connIndex = 0
 
     for (const line of lines) {
+<<<<<<< HEAD
       // Main IKE SA line (NO leading whitespace, contains "IKEv2"):
       // "ikev2-cert: #1, ESTABLISHED, IKEv2, 7fc0e33c7b667510_i 654295c3f323f97b_r*"
       // NOT child SA lines like: "  net: #1, reqid 1, INSTALLED, TUNNEL, ESP:..."
       const connMatch = line.match(/^(\S+):\s*#(\d+),\s*(\w+),\s*IKEv2/)
       if (connMatch) {
         // Save previous connection
+=======
+      // Connection name line: "ikev2-cert: #1"
+      const connMatch = line.match(/^\s*(\S+):\s*#?(\d+)/)
+      if (connMatch) {
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
         if (currentConn && currentConn.name) {
           connections.push({
             id: currentConn.id || `conn-${connIndex}`,
             name: currentConn.name,
+<<<<<<< HEAD
             user: currentConn.user || 'unknown',
+=======
+            user: currentConn.user || currentConn.remoteId || 'unknown',
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             userDn: currentConn.userDn,
             remoteIp: currentConn.remoteIp || '0.0.0.0',
             localIp: currentConn.localIp,
@@ -267,15 +280,22 @@ export async function getActiveConnections(): Promise<VpnConnection[]> {
           connIndex++
         }
         currentConn = {
+<<<<<<< HEAD
           id: `conn-${connMatch[2]}`,
           name: connMatch[1],
           state: connMatch[3].toUpperCase() as VpnConnection['state']
+=======
+          id: `conn-${connIndex}`,
+          name: connMatch[1],
+          state: 'UNKNOWN'
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
         }
         continue
       }
 
       if (!currentConn) continue
 
+<<<<<<< HEAD
       // Parse local line: "  local  'vpnserver' @ 10.121.18.218[4500]"
       const localMatch = line.match(/^\s*local\s+['"]?([^'"]+?)['"]?\s*@\s*([\d.]+)\[(\d+)\]/)
       if (localMatch) {
@@ -350,6 +370,89 @@ export async function getActiveConnections(): Promise<VpnConnection[]> {
       if (remoteSubnetMatch && !currentConn.virtualIp) {
         currentConn.virtualIp = remoteSubnetMatch[1]
         continue
+=======
+      // Parse various fields
+      if (line.includes('remote host:')) {
+        const match = line.match(/remote host:\s*(\d+\.\d+\.\d+\.\d+)/)
+        if (match) currentConn.remoteIp = match[1]
+      }
+      
+      if (line.includes('local host:')) {
+        const match = line.match(/local host:\s*(\d+\.\d+\.\d+\.\d+)/)
+        if (match) currentConn.localIp = match[1]
+      }
+
+      if (line.includes('remote ID:')) {
+        const match = line.match(/remote ID:\s*'?([^'\n]+)'?/)
+        if (match) {
+          currentConn.remoteId = match[1].trim()
+          // Extract username from DN if available
+          const cnMatch = match[1].match(/CN=([^,]+)/)
+          if (cnMatch) {
+            currentConn.user = cnMatch[1]
+          } else {
+            currentConn.user = match[1].trim()
+          }
+        }
+      }
+
+      if (line.includes('local ID:')) {
+        const match = line.match(/local ID:\s*'?([^'\n]+)'?/)
+        if (match) currentConn.localId = match[1].trim()
+      }
+
+      if (line.includes('established:')) {
+        const match = line.match(/established:\s*(\d+)\s*s/)
+        if (match) {
+          currentConn.established = parseInt(match[1])
+          // Calculate connected time
+          const connectedAt = new Date(Date.now() - parseInt(match[1]) * 1000)
+          currentConn.connectedAt = connectedAt
+        }
+      }
+
+      if (line.includes('state:')) {
+        const match = line.match(/state:\s*(\w+)/)
+        if (match) {
+          currentConn.state = match[1].toUpperCase() as VpnConnection['state']
+        }
+      }
+
+      // Parse bytes in/out
+      if (line.includes('bytes in:')) {
+        const match = line.match(/bytes in:\s*(\d+)/)
+        if (match) currentConn.bytesIn = parseInt(match[1])
+      }
+      if (line.includes('bytes out:')) {
+        const match = line.match(/bytes out:\s*(\d+)/)
+        if (match) currentConn.bytesOut = parseInt(match[1])
+      }
+
+      // Parse packets in/out
+      if (line.includes('packets in:')) {
+        const match = line.match(/packets in:\s*(\d+)/)
+        if (match) currentConn.packetsIn = parseInt(match[1])
+      }
+      if (line.includes('packets out:')) {
+        const match = line.match(/packets out:\s*(\d+)/)
+        if (match) currentConn.packetsOut = parseInt(match[1])
+      }
+
+      // Parse proposals
+      if (line.includes('IKE proposal:')) {
+        const match = line.match(/IKE proposal:\s*(\S+)/)
+        if (match) currentConn.ikeProposal = match[1]
+      }
+      if (line.includes('ESP proposal:')) {
+        const match = line.match(/ESP proposal:\s*(\S+)/)
+        if (match) currentConn.espProposal = match[1]
+      }
+
+      // Parse virtual IP
+      if (line.includes('virtual IP:')) {
+        const match = line.match(/virtual IP:\s*(\d+\.\d+\.\d+\.\d+)/)
+        if (match) currentConn.virtualIp = match[1]
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       }
     }
 
@@ -358,7 +461,11 @@ export async function getActiveConnections(): Promise<VpnConnection[]> {
       connections.push({
         id: currentConn.id || `conn-${connIndex}`,
         name: currentConn.name,
+<<<<<<< HEAD
         user: currentConn.user || 'unknown',
+=======
+        user: currentConn.user || currentConn.remoteId || 'unknown',
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
         userDn: currentConn.userDn,
         remoteIp: currentConn.remoteIp || '0.0.0.0',
         localIp: currentConn.localIp,

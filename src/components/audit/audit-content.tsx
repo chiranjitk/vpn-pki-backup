@@ -72,6 +72,7 @@ interface AuditLog {
   createdAt: string
 }
 
+<<<<<<< HEAD
 const actorTypeLabels: Record<string, string> = {
   SUPERADMIN: 'Super Admin',
   ADMIN: 'Admin',
@@ -81,6 +82,8 @@ const actorTypeLabels: Record<string, string> = {
   API: 'API',
 }
 
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 interface AuditStats {
   todayTotal: number
   todaySuccess: number
@@ -406,12 +409,16 @@ export function AuditContent() {
                         </span>
                       </TableCell>
                       <TableCell>
+<<<<<<< HEAD
                         <div>
                           <div className="font-medium">{log.actor}</div>
                           <div className="text-xs text-muted-foreground">
                             {actorTypeLabels[log.actorType] || log.actorType}
                           </div>
                         </div>
+=======
+                        {log.actor || log.actorType}
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                       </TableCell>
                       <TableCell>
                         {log.targetType ? `${log.targetType}` : '-'}

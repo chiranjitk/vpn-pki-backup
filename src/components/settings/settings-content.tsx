@@ -3,26 +3,35 @@
 import { useState, useEffect } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
+<<<<<<< HEAD
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+=======
+  Card, CardContent, CardDescription, CardHeader, CardTitle,
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import {
+<<<<<<< HEAD
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+=======
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 } from '@/components/ui/select'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import {
+<<<<<<< HEAD
   Table,
   TableBody,
   TableCell,
@@ -68,12 +77,29 @@ import {
   Globe,
   Activity,
   BarChart3,
+=======
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table'
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Settings, Shield, ShieldCheck, Bell, Database, KeyRound, AlertTriangle, Save, Server, Mail, RefreshCw, Download, Upload, Trash2, CheckCircle2, XCircle, Clock, HardDrive, Plus, Copy, Eye, EyeOff,
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { VpnSettings } from './vpn-settings'
 import { SecuritySettings } from './security-settings'
+<<<<<<< HEAD
 import { SiemIntegrationSettings } from './siem-integration-settings'
 import { FirewallIntegrationSettings } from './firewall-integration-settings'
+=======
+import { RadiusLdapSettings } from './radius-ldap-settings'
+import { GeoIpSettings } from './geo-ip-settings'
+import { GuestUsersSettings } from './guest-users-settings'
+import { VpnSessionsSettings } from './vpn-sessions-settings'
+import { SiemIntegrationSettings } from './siem-integration-settings'
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 import { RateLimitSettings } from './rate-limit-settings'
 import { FirewallSettings } from './firewall-settings'
 
@@ -106,6 +132,7 @@ interface ApiKey {
   lastUsedAt: string | null
   expiresAt: string | null
   createdAt: string
+<<<<<<< HEAD
   key?: string // Only present when newly created
 }
 
@@ -159,6 +186,9 @@ interface LdapSyncLog {
   usersUnchanged: number
   status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'PARTIAL'
   errorMessage: string | null
+=======
+  key?: string
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 }
 
 export function SettingsContent() {
@@ -166,6 +196,7 @@ export function SettingsContent() {
 
   // SMTP State
   const [smtpConfig, setSmtpConfig] = useState<SmtpConfig>({
+<<<<<<< HEAD
     id: '',
     host: '',
     port: 587,
@@ -174,6 +205,10 @@ export function SettingsContent() {
     fromName: 'VPN PKI Manager',
     useTls: true,
     isEnabled: false,
+=======
+    id: '', host: '', port: 587, username: '',
+    fromEmail: '', fromName: 'VPN PKI Manager', useTls: true, isEnabled: false,
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   })
   const [smtpPassword, setSmtpPassword] = useState('')
   const [testEmail, setTestEmail] = useState('')
@@ -197,6 +232,7 @@ export function SettingsContent() {
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<ApiKey | null>(null)
   const [showKey, setShowKey] = useState(false)
 
+<<<<<<< HEAD
   // RADIUS State
   const [radiusConfig, setRadiusConfig] = useState<RadiusConfig>({
     id: null,
@@ -243,12 +279,17 @@ export function SettingsContent() {
   const [syncingLdap, setSyncingLdap] = useState(false)
   const [syncLogs, setSyncLogs] = useState<LdapSyncLog[]>([])
 
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   useEffect(() => {
     fetchSmtpConfig()
     fetchBackups()
     fetchApiKeys()
+<<<<<<< HEAD
     fetchRadiusConfig()
     fetchLdapConfig()
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   }, [])
 
   const fetchSmtpConfig = async () => {
@@ -256,9 +297,13 @@ export function SettingsContent() {
       const response = await fetch('/api/smtp')
       if (response.ok) {
         const data = await response.json()
+<<<<<<< HEAD
         if (data.config) {
           setSmtpConfig(data.config)
         }
+=======
+        if (data.config) setSmtpConfig(data.config)
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       }
     } catch (error) {
       console.error('Failed to fetch SMTP config:', error)
@@ -295,6 +340,7 @@ export function SettingsContent() {
     }
   }
 
+<<<<<<< HEAD
   const fetchRadiusConfig = async () => {
     try {
       const response = await fetch('/api/radius')
@@ -468,6 +514,8 @@ export function SettingsContent() {
     }
   }
 
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   const handleSave = async () => {
     setIsLoading(true)
     setTimeout(() => {
@@ -482,6 +530,7 @@ export function SettingsContent() {
       const response = await fetch('/api/smtp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+<<<<<<< HEAD
         body: JSON.stringify({
           ...smtpConfig,
           password: smtpPassword || undefined,
@@ -490,6 +539,11 @@ export function SettingsContent() {
 
       if (!response.ok) throw new Error('Failed to save SMTP configuration')
 
+=======
+        body: JSON.stringify({ ...smtpConfig, password: smtpPassword || undefined }),
+      })
+      if (!response.ok) throw new Error('Failed to save SMTP configuration')
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       toast.success('SMTP configuration saved')
     } catch (error) {
       toast.error('Failed to save SMTP configuration')
@@ -503,7 +557,10 @@ export function SettingsContent() {
       toast.error('Please enter a test email address')
       return
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     setTestingSmtp(true)
     try {
       const response = await fetch('/api/smtp/test', {
@@ -511,9 +568,13 @@ export function SettingsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: testEmail }),
       })
+<<<<<<< HEAD
 
       if (!response.ok) throw new Error('Failed to send test email')
 
+=======
+      if (!response.ok) throw new Error('Failed to send test email')
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       toast.success('Test email sent successfully')
     } catch (error) {
       toast.error('Failed to send test email')
@@ -530,9 +591,13 @@ export function SettingsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type }),
       })
+<<<<<<< HEAD
 
       if (!response.ok) throw new Error('Failed to create backup')
 
+=======
+      if (!response.ok) throw new Error('Failed to create backup')
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       const data = await response.json()
       toast.success(`Backup created: ${data.backup?.filename || 'successfully'}`)
       fetchBackups()
@@ -549,6 +614,7 @@ export function SettingsContent() {
 
   const handleRestoreBackup = async (backup: BackupRecord) => {
     if (!confirm(`Are you sure you want to restore from ${backup.filename}? This will overwrite current data.`)) return
+<<<<<<< HEAD
 
     setRestoringBackup(backup.id)
     try {
@@ -558,6 +624,12 @@ export function SettingsContent() {
 
       if (!response.ok) throw new Error('Failed to restore backup')
 
+=======
+    setRestoringBackup(backup.id)
+    try {
+      const response = await fetch(`/api/backup/${backup.id}/restore`, { method: 'POST' })
+      if (!response.ok) throw new Error('Failed to restore backup')
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       toast.success('Backup restored successfully. Please refresh the page.')
     } catch (error) {
       toast.error('Failed to restore backup')
@@ -568,6 +640,7 @@ export function SettingsContent() {
 
   const handleDeleteBackup = async (backup: BackupRecord) => {
     if (!confirm(`Delete backup ${backup.filename}?`)) return
+<<<<<<< HEAD
 
     try {
       const response = await fetch(`/api/backup/${backup.id}`, {
@@ -576,6 +649,11 @@ export function SettingsContent() {
 
       if (!response.ok) throw new Error('Failed to delete backup')
 
+=======
+    try {
+      const response = await fetch(`/api/backup/${backup.id}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error('Failed to delete backup')
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       toast.success('Backup deleted')
       fetchBackups()
     } catch (error) {
@@ -583,13 +661,19 @@ export function SettingsContent() {
     }
   }
 
+<<<<<<< HEAD
   // API Key handlers
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   const handleCreateApiKey = async () => {
     if (!newKeyName) {
       toast.error('Please enter a name for the API key')
       return
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     setCreatingKey(true)
     try {
       const response = await fetch('/api/api-keys', {
@@ -601,9 +685,13 @@ export function SettingsContent() {
           expiresInDays: newKeyExpiry && newKeyExpiry !== 'never' ? parseInt(newKeyExpiry) : undefined,
         }),
       })
+<<<<<<< HEAD
 
       if (!response.ok) throw new Error('Failed to create API key')
 
+=======
+      if (!response.ok) throw new Error('Failed to create API key')
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       const data = await response.json()
       setNewlyCreatedKey(data.key)
       setShowCreateKeyDialog(false)
@@ -631,9 +719,13 @@ export function SettingsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isEnabled: !isEnabled }),
       })
+<<<<<<< HEAD
 
       if (!response.ok) throw new Error('Failed to update API key')
 
+=======
+      if (!response.ok) throw new Error('Failed to update API key')
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       toast.success(`API key ${!isEnabled ? 'enabled' : 'disabled'}`)
       fetchApiKeys()
     } catch (error) {
@@ -643,6 +735,7 @@ export function SettingsContent() {
 
   const handleDeleteApiKey = async (key: ApiKey) => {
     if (!confirm(`Delete API key "${key.name}"? This action cannot be undone.`)) return
+<<<<<<< HEAD
 
     try {
       const response = await fetch(`/api/api-keys/${key.id}`, {
@@ -651,6 +744,11 @@ export function SettingsContent() {
 
       if (!response.ok) throw new Error('Failed to delete API key')
 
+=======
+    try {
+      const response = await fetch(`/api/api-keys/${key.id}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error('Failed to delete API key')
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       toast.success('API key deleted')
       fetchApiKeys()
     } catch (error) {
@@ -673,6 +771,7 @@ export function SettingsContent() {
 
   return (
     <div className="space-y-6">
+<<<<<<< HEAD
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -680,10 +779,17 @@ export function SettingsContent() {
           <p className="text-muted-foreground">
             System configuration and preferences
           </p>
+=======
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground">System configuration and preferences</p>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
         </div>
       </div>
 
       <Tabs defaultValue="vpn" className="space-y-4">
+<<<<<<< HEAD
         <TabsList className="grid w-full grid-cols-10 h-auto">
           <TabsTrigger value="vpn" className="text-xs sm:text-sm"><Server className="mr-1 sm:mr-2 h-4 w-4" /><span className="hidden sm:inline">VPN</span> Config</TabsTrigger>
           <TabsTrigger value="security" className="text-xs sm:text-sm"><Shield className="mr-1 sm:mr-2 h-4 w-4" /><span className="hidden sm:inline">2FA &</span> OCSP</TabsTrigger>
@@ -715,6 +821,39 @@ export function SettingsContent() {
         </TabsContent>
 
         {/* SMTP Configuration Tab */}
+=======
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-10 h-auto">
+          <TabsTrigger value="vpn" className="text-xs sm:text-sm"><Server className="mr-1 sm:mr-2 h-4 w-4" /><span className="hidden sm:inline">VPN</span> Config</TabsTrigger>
+          <TabsTrigger value="security" className="text-xs sm:text-sm"><Shield className="mr-1 sm:mr-2 h-4 w-4" /><span className="hidden sm:inline">2FA &</span> OCSP</TabsTrigger>
+          <TabsTrigger value="radius-ldap" className="text-xs sm:text-sm"><Database className="mr-1 sm:mr-2 h-4 w-4" /><span className="hidden sm:inline">RADIUS/LDAP</span></TabsTrigger>
+          <TabsTrigger value="geo-ip" className="text-xs sm:text-sm"><Settings className="mr-1 sm:mr-2 h-4 w-4" />Geo/IP</TabsTrigger>
+          <TabsTrigger value="guests" className="text-xs sm:text-sm"><KeyRound className="mr-1 sm:mr-2 h-4 w-4" />Guests</TabsTrigger>
+          <TabsTrigger value="sessions" className="text-xs sm:text-sm"><RefreshCw className="mr-1 sm:mr-2 h-4 w-4" />Sessions</TabsTrigger>
+          <TabsTrigger value="siem" className="text-xs sm:text-sm"><Bell className="mr-1 sm:mr-2 h-4 w-4" />SIEM</TabsTrigger>
+          <TabsTrigger value="smtp" className="text-xs sm:text-sm"><Mail className="mr-1 sm:mr-2 h-4 w-4" />SMTP</TabsTrigger>
+          <TabsTrigger value="rate-limit" className="text-xs sm:text-sm"><Shield className="mr-1 sm:mr-2 h-4 w-4" />Rate Limit</TabsTrigger>
+          <TabsTrigger value="firewall" className="text-xs sm:text-sm"><ShieldCheck className="mr-1 sm:mr-2 h-4 w-4" />Firewall</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="vpn"><VpnSettings /></TabsContent>
+
+        <TabsContent value="security"><SecuritySettings /></TabsContent>
+
+        <TabsContent value="radius-ldap"><RadiusLdapSettings /></TabsContent>
+
+        <TabsContent value="geo-ip"><GeoIpSettings /></TabsContent>
+
+        <TabsContent value="guests"><GuestUsersSettings /></TabsContent>
+
+        <TabsContent value="sessions"><VpnSessionsSettings /></TabsContent>
+
+        <TabsContent value="siem"><SiemIntegrationSettings /></TabsContent>
+
+        <TabsContent value="rate-limit"><RateLimitSettings /></TabsContent>
+
+        <TabsContent value="firewall"><FirewallSettings /></TabsContent>
+
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
         <TabsContent value="smtp">
           <Card>
             <CardHeader>
@@ -722,14 +861,19 @@ export function SettingsContent() {
                 <Mail className="h-5 w-5" />
                 SMTP Configuration
               </CardTitle>
+<<<<<<< HEAD
               <CardDescription>
                 Configure email server for notifications and alerts
               </CardDescription>
+=======
+              <CardDescription>Configure email server for notifications and alerts</CardDescription>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Enable Email Notifications</Label>
+<<<<<<< HEAD
                   <p className="text-sm text-muted-foreground">
                     Send email alerts for certificate expirations and system events
                   </p>
@@ -738,6 +882,11 @@ export function SettingsContent() {
                   checked={smtpConfig.isEnabled}
                   onCheckedChange={(checked) => setSmtpConfig({ ...smtpConfig, isEnabled: checked })}
                 />
+=======
+                  <p className="text-sm text-muted-foreground">Send email alerts for certificate expirations and system events</p>
+                </div>
+                <Switch checked={smtpConfig.isEnabled} onCheckedChange={(checked) => setSmtpConfig({ ...smtpConfig, isEnabled: checked })} />
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
               </div>
 
               <Separator />
@@ -745,6 +894,7 @@ export function SettingsContent() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="smtp-host">SMTP Host</Label>
+<<<<<<< HEAD
                   <Input
                     id="smtp-host"
                     placeholder="smtp.example.com"
@@ -760,12 +910,20 @@ export function SettingsContent() {
                     value={smtpConfig.port}
                     onChange={(e) => setSmtpConfig({ ...smtpConfig, port: parseInt(e.target.value) || 587 })}
                   />
+=======
+                  <Input id="smtp-host" placeholder="smtp.example.com" value={smtpConfig.host} onChange={(e) => setSmtpConfig({ ...smtpConfig, host: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="smtp-port">SMTP Port</Label>
+                  <Input id="smtp-port" type="number" value={smtpConfig.port} onChange={(e) => setSmtpConfig({ ...smtpConfig, port: parseInt(e.target.value) || 587 })} />
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="smtp-username">Username (optional)</Label>
+<<<<<<< HEAD
                   <Input
                     id="smtp-username"
                     placeholder="username"
@@ -782,12 +940,20 @@ export function SettingsContent() {
                     value={smtpPassword}
                     onChange={(e) => setSmtpPassword(e.target.value)}
                   />
+=======
+                  <Input id="smtp-username" placeholder="username" value={smtpConfig.username || ''} onChange={(e) => setSmtpConfig({ ...smtpConfig, username: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="smtp-password">Password</Label>
+                  <Input id="smtp-password" type="password" placeholder="••••••••" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} />
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="from-email">From Email</Label>
+<<<<<<< HEAD
                   <Input
                     id="from-email"
                     type="email"
@@ -804,12 +970,20 @@ export function SettingsContent() {
                     value={smtpConfig.fromName}
                     onChange={(e) => setSmtpConfig({ ...smtpConfig, fromName: e.target.value })}
                   />
+=======
+                  <Input id="from-email" type="email" placeholder="noreply@example.com" value={smtpConfig.fromEmail} onChange={(e) => setSmtpConfig({ ...smtpConfig, fromEmail: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="from-name">From Name</Label>
+                  <Input id="from-name" placeholder="VPN PKI Manager" value={smtpConfig.fromName} onChange={(e) => setSmtpConfig({ ...smtpConfig, fromName: e.target.value })} />
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                 </div>
               </div>
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Use TLS</Label>
+<<<<<<< HEAD
                   <p className="text-sm text-muted-foreground">
                     Enable TLS encryption for SMTP connection
                   </p>
@@ -818,6 +992,11 @@ export function SettingsContent() {
                   checked={smtpConfig.useTls}
                   onCheckedChange={(checked) => setSmtpConfig({ ...smtpConfig, useTls: checked })}
                 />
+=======
+                  <p className="text-sm text-muted-foreground">Enable TLS encryption for SMTP connection</p>
+                </div>
+                <Switch checked={smtpConfig.useTls} onCheckedChange={(checked) => setSmtpConfig({ ...smtpConfig, useTls: checked })} />
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
               </div>
 
               <Separator />
@@ -825,12 +1004,16 @@ export function SettingsContent() {
               <div className="space-y-4">
                 <Label>Test Email Configuration</Label>
                 <div className="flex gap-2">
+<<<<<<< HEAD
                   <Input
                     placeholder="test@example.com"
                     type="email"
                     value={testEmail}
                     onChange={(e) => setTestEmail(e.target.value)}
                   />
+=======
+                  <Input placeholder="test@example.com" type="email" value={testEmail} onChange={(e) => setTestEmail(e.target.value)} />
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                   <Button variant="outline" onClick={handleTestSmtp} disabled={testingSmtp}>
                     {testingSmtp ? 'Sending...' : 'Send Test Email'}
                   </Button>
@@ -844,6 +1027,7 @@ export function SettingsContent() {
             </CardContent>
           </Card>
         </TabsContent>
+<<<<<<< HEAD
 
         {/* RADIUS Configuration Tab */}
         <TabsContent value="radius">
@@ -1555,29 +1739,46 @@ export function SettingsContent() {
       </Tabs>
 
       {/* Create API Key Dialog */}
+=======
+      </Tabs>
+
+      {/* API Keys Dialog */}
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       <Dialog open={showCreateKeyDialog} onOpenChange={setShowCreateKeyDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create API Key</DialogTitle>
+<<<<<<< HEAD
             <DialogDescription>
               Generate a new API key for external integrations
             </DialogDescription>
+=======
+            <DialogDescription>Generate a new API key for external integrations</DialogDescription>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Name</Label>
+<<<<<<< HEAD
               <Input
                 placeholder="e.g., Monitoring System"
                 value={newKeyName}
                 onChange={(e) => setNewKeyName(e.target.value)}
               />
+=======
+              <Input placeholder="e.g., Monitoring System" value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)} />
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             </div>
             <div className="space-y-2">
               <Label>Permissions</Label>
               <Select value={newKeyPermissions} onValueChange={setNewKeyPermissions}>
+<<<<<<< HEAD
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
+=======
+                <SelectTrigger><SelectValue /></SelectTrigger>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                 <SelectContent>
                   <SelectItem value="read">Read Only</SelectItem>
                   <SelectItem value="read,write">Read & Write</SelectItem>
@@ -1588,9 +1789,13 @@ export function SettingsContent() {
             <div className="space-y-2">
               <Label>Expiry (optional)</Label>
               <Select value={newKeyExpiry} onValueChange={setNewKeyExpiry}>
+<<<<<<< HEAD
                 <SelectTrigger>
                   <SelectValue placeholder="Never" />
                 </SelectTrigger>
+=======
+                <SelectTrigger><SelectValue placeholder="Never" /></SelectTrigger>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                 <SelectContent>
                   <SelectItem value="never">Never</SelectItem>
                   <SelectItem value="30">30 days</SelectItem>
@@ -1601,30 +1806,43 @@ export function SettingsContent() {
             </div>
           </div>
           <DialogFooter>
+<<<<<<< HEAD
             <Button variant="outline" onClick={() => setShowCreateKeyDialog(false)}>
               Cancel
             </Button>
             <Button onClick={handleCreateApiKey} disabled={creatingKey}>
               {creatingKey ? 'Creating...' : 'Create Key'}
             </Button>
+=======
+            <Button variant="outline" onClick={() => setShowCreateKeyDialog(false)}>Cancel</Button>
+            <Button onClick={handleCreateApiKey} disabled={creatingKey}>{creatingKey ? 'Creating...' : 'Create Key'}</Button>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+<<<<<<< HEAD
       {/* Show New API Key Dialog */}
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       <Dialog open={showKeyDialog} onOpenChange={setShowKeyDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>API Key Created</DialogTitle>
+<<<<<<< HEAD
             <DialogDescription>
               Copy your API key now. It will not be shown again.
             </DialogDescription>
+=======
+            <DialogDescription>Copy your API key now. It will not be shown again.</DialogDescription>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           </DialogHeader>
           {newlyCreatedKey && (
             <div className="space-y-4">
               <Alert className="bg-green-500/10 border-green-500/20">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
                 <AlertTitle>Key Created Successfully</AlertTitle>
+<<<<<<< HEAD
                 <AlertDescription>
                   Name: {newlyCreatedKey.name}<br />
                   Permissions: {newlyCreatedKey.permissions}
@@ -1640,6 +1858,14 @@ export function SettingsContent() {
                     readOnly
                     className="font-mono text-sm"
                   />
+=======
+                <AlertDescription>Name: {newlyCreatedKey.name}<br />Permissions: {newlyCreatedKey.permissions}</AlertDescription>
+              </Alert>
+              <div className="space-y-2">
+                <Label>Your API Key</Label>
+                <div className="flex gap-2">
+                  <Input type={showKey ? 'text' : 'password'} value={newlyCreatedKey.key} readOnly className="font-mono text-sm" />
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                   <Button variant="outline" size="icon" onClick={() => setShowKey(!showKey)}>
                     {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
@@ -1648,6 +1874,7 @@ export function SettingsContent() {
                   </Button>
                 </div>
               </div>
+<<<<<<< HEAD
 
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
@@ -1655,13 +1882,23 @@ export function SettingsContent() {
                 <AlertDescription>
                   Store this key securely. You won't be able to see it again after closing this dialog.
                 </AlertDescription>
+=======
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Important</AlertTitle>
+                <AlertDescription>Store this key securely. You won&apos;t be able to see it again after closing this dialog.</AlertDescription>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
               </Alert>
             </div>
           )}
           <DialogFooter>
+<<<<<<< HEAD
             <Button onClick={() => setShowKeyDialog(false)}>
               Done
             </Button>
+=======
+            <Button onClick={() => setShowKeyDialog(false)}>Done</Button>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           </DialogFooter>
         </DialogContent>
       </Dialog>

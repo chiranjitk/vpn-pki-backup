@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * VPN Session Disconnect API
  * POST: Disconnect a specific VPN session
@@ -6,6 +7,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { terminateConnection } from '@/lib/vpn/monitor'
+=======
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 
 export async function POST(
   request: NextRequest,
@@ -13,6 +18,7 @@ export async function POST(
 ) {
   try {
     const { id } = await params
+<<<<<<< HEAD
     const body = await request.json().catch(() => ({}))
     
     const { reason, terminatedBy } = body
@@ -138,3 +144,21 @@ function formatDuration(seconds: number): string {
 
   return parts.join(' ')
 }
+=======
+    const body = await request.json()
+    
+    const session = await db.vpnSession.update({
+      where: { id },
+      data: {
+        status: 'DISCONNECTED',
+        disconnectedAt: new Date(),
+        disconnectReason: body.reason || 'Admin disconnect',
+      }
+    })
+    
+    return NextResponse.json({ success: true, session })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to disconnect session' }, { status: 500 })
+  }
+}
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124

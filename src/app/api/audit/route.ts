@@ -50,7 +50,10 @@ export async function GET(request: NextRequest) {
             select: {
               username: true,
               email: true,
+<<<<<<< HEAD
               role: true,
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             },
           },
         },
@@ -89,7 +92,11 @@ export async function GET(request: NextRequest) {
           action: log.action,
           category: log.category,
           actor: log.actor?.username || log.actorType,
+<<<<<<< HEAD
           actorType: log.actor?.role || log.actorType,
+=======
+          actorType: log.actorType,
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           targetId: log.targetId,
           targetType: log.targetType,
           details: parsedDetails,

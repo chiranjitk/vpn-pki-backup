@@ -1,6 +1,9 @@
 'use client'
 
+<<<<<<< HEAD
 // VPN PKI Management Platform - Main Entry Point
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 import { useAuth } from '@/hooks/use-auth'
 import { AppLayout } from '@/components/layout/app-layout'
 import { DashboardContent } from '@/components/dashboard/dashboard-content'

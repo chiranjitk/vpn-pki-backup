@@ -2,17 +2,22 @@
 
 import { useState, useEffect } from 'react'
 import {
+<<<<<<< HEAD
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+=======
+  Card, CardContent, CardDescription, CardHeader, CardTitle,
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import {
+<<<<<<< HEAD
   Select,
   SelectContent,
   SelectItem,
@@ -52,6 +57,21 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { toast } from 'sonner'
+=======
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table'
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Shield, Server, Activity, AlertTriangle, CheckCircle2, Loader2, Plus, Trash2, Edit, Send, Download,
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { Separator } from '@/components/ui/separator'
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 
 interface SiemConfig {
   id: string
@@ -92,6 +112,7 @@ export function SiemIntegrationSettings() {
   const [testing, setTesting] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
 
+<<<<<<< HEAD
   // Form state
   const [formData, setFormData] = useState({
     siemType: 'SPLUNK',
@@ -112,6 +133,17 @@ export function SiemIntegrationSettings() {
   useEffect(() => {
     fetchConfigs()
   }, [])
+=======
+  const [formData, setFormData] = useState({
+    siemType: 'SPLUNK', endpointUrl: '', apiToken: '',
+    syslogHost: '', syslogPort: 514, syslogProtocol: 'UDP',
+    logFormat: 'JSON', logAuthentication: true, logCertificates: true,
+    logVpnSessions: true, logAdminActions: true, logSecurityEvents: true,
+    isEnabled: false,
+  })
+
+  useEffect(() => { fetchConfigs() }, [])
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 
   const fetchConfigs = async () => {
     setLoading(true)
@@ -180,7 +212,10 @@ export function SiemIntegrationSettings() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this SIEM configuration?')) return
+<<<<<<< HEAD
 
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     try {
       const response = await fetch(`/api/siem/${id}`, { method: 'DELETE' })
       if (response.ok) {
@@ -215,6 +250,7 @@ export function SiemIntegrationSettings() {
     }
   }
 
+<<<<<<< HEAD
   const handleSendPending = async () => {
     try {
       const response = await fetch('/api/siem/events', { method: 'POST' })
@@ -243,6 +279,15 @@ export function SiemIntegrationSettings() {
       logVpnSessions: true,
       logAdminActions: true,
       logSecurityEvents: true,
+=======
+  const resetForm = () => {
+    setEditingId(null)
+    setFormData({
+      siemType: 'SPLUNK', endpointUrl: '', apiToken: '',
+      syslogHost: '', syslogPort: 514, syslogProtocol: 'UDP',
+      logFormat: 'JSON', logAuthentication: true, logCertificates: true,
+      logVpnSessions: true, logAdminActions: true, logSecurityEvents: true,
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       isEnabled: false,
     })
   }
@@ -272,13 +317,17 @@ export function SiemIntegrationSettings() {
 
   return (
     <div className="space-y-6">
+<<<<<<< HEAD
       {/* Header */}
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">SIEM Integration</h2>
           <p className="text-muted-foreground">Send security events to your SIEM platform</p>
         </div>
         <div className="flex gap-2">
+<<<<<<< HEAD
           <Button variant="outline" onClick={handleSendPending}>
             <Send className="mr-2 h-4 w-4" />
             Send Pending
@@ -286,11 +335,18 @@ export function SiemIntegrationSettings() {
           <Button onClick={() => { resetForm(); setShowAddDialog(true); }}>
             <Plus className="mr-2 h-4 w-4" />
             Add SIEM
+=======
+          <Button onClick={() => { resetForm(); setShowAddDialog(true); }}>
+            <Plus className="mr-2 h-4 w-4" />Add SIEM
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           </Button>
         </div>
       </div>
 
+<<<<<<< HEAD
       {/* Config List */}
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       <Card>
         <CardHeader>
           <CardTitle>Configured SIEM Systems</CardTitle>
@@ -298,9 +354,13 @@ export function SiemIntegrationSettings() {
         </CardHeader>
         <CardContent>
           {loading ? (
+<<<<<<< HEAD
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
+=======
+            <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           ) : configs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Shield className="h-12 w-12 mx-auto mb-2 opacity-50" />
@@ -331,16 +391,24 @@ export function SiemIntegrationSettings() {
                             <div className="text-xs text-muted-foreground">{siemType?.description}</div>
                           </div>
                         </TableCell>
+<<<<<<< HEAD
                         <TableCell>
                           <code className="text-sm">{config.endpointUrl || config.syslogHost}</code>
                         </TableCell>
+=======
+                        <TableCell><code className="text-sm">{config.endpointUrl || config.syslogHost}</code></TableCell>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                         <TableCell>{config.logFormat}</TableCell>
                         <TableCell>{config.eventsSent.toLocaleString()}</TableCell>
                         <TableCell>
                           {config.isEnabled ? (
                             <span className="inline-flex items-center gap-1 text-green-600">
+<<<<<<< HEAD
                               <CheckCircle2 className="h-4 w-4" />
                               Active
+=======
+                              <CheckCircle2 className="h-4 w-4" />Active
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                             </span>
                           ) : (
                             <span className="text-muted-foreground">Disabled</span>
@@ -351,12 +419,17 @@ export function SiemIntegrationSettings() {
                             <Button variant="ghost" size="sm" onClick={() => handleTest(config.id)} disabled={testing === config.id}>
                               {testing === config.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4" />}
                             </Button>
+<<<<<<< HEAD
                             <Button variant="ghost" size="sm" onClick={() => editConfig(config)}>
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="sm" onClick={() => handleDelete(config.id)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
+=======
+                            <Button variant="ghost" size="sm" onClick={() => editConfig(config)}><Edit className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(config.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                           </div>
                         </TableCell>
                       </TableRow>
@@ -369,7 +442,10 @@ export function SiemIntegrationSettings() {
         </CardContent>
       </Card>
 
+<<<<<<< HEAD
       {/* Export Options */}
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       <Card>
         <CardHeader>
           <CardTitle>Export Logs</CardTitle>
@@ -378,6 +454,7 @@ export function SiemIntegrationSettings() {
         <CardContent>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => handleExport('json')} disabled={exporting}>
+<<<<<<< HEAD
               <Download className="mr-2 h-4 w-4" />
               JSON
             </Button>
@@ -392,12 +469,27 @@ export function SiemIntegrationSettings() {
             <Button variant="outline" onClick={() => handleExport('leef')} disabled={exporting}>
               <Download className="mr-2 h-4 w-4" />
               LEEF
+=======
+              <Download className="mr-2 h-4 w-4" />JSON
+            </Button>
+            <Button variant="outline" onClick={() => handleExport('csv')} disabled={exporting}>
+              <Download className="mr-2 h-4 w-4" />CSV
+            </Button>
+            <Button variant="outline" onClick={() => handleExport('cef')} disabled={exporting}>
+              <Download className="mr-2 h-4 w-4" />CEF
+            </Button>
+            <Button variant="outline" onClick={() => handleExport('leef')} disabled={exporting}>
+              <Download className="mr-2 h-4 w-4" />LEEF
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             </Button>
           </div>
         </CardContent>
       </Card>
 
+<<<<<<< HEAD
       {/* Add/Edit Dialog */}
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -408,9 +500,13 @@ export function SiemIntegrationSettings() {
             <div className="space-y-2">
               <Label>SIEM Type</Label>
               <Select value={formData.siemType} onValueChange={(v) => setFormData({ ...formData, siemType: v })}>
+<<<<<<< HEAD
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
+=======
+                <SelectTrigger><SelectValue /></SelectTrigger>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                 <SelectContent>
                   {SIEM_TYPES.map((type) => (
                     <SelectItem key={type.value} value={type.value}>
@@ -428,6 +524,7 @@ export function SiemIntegrationSettings() {
               <>
                 <div className="space-y-2">
                   <Label>Endpoint URL</Label>
+<<<<<<< HEAD
                   <Input
                     placeholder="https://siem.example.com/api/events"
                     value={formData.endpointUrl}
@@ -442,6 +539,13 @@ export function SiemIntegrationSettings() {
                     value={formData.apiToken}
                     onChange={(e) => setFormData({ ...formData, apiToken: e.target.value })}
                   />
+=======
+                  <Input placeholder="https://siem.example.com/api/events" value={formData.endpointUrl} onChange={(e) => setFormData({ ...formData, endpointUrl: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>API Token</Label>
+                  <Input type="password" placeholder="Enter API token" value={formData.apiToken} onChange={(e) => setFormData({ ...formData, apiToken: e.target.value })} />
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                 </div>
               </>
             )}
@@ -450,6 +554,7 @@ export function SiemIntegrationSettings() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2 col-span-2">
                   <Label>Syslog Host</Label>
+<<<<<<< HEAD
                   <Input
                     placeholder="syslog.example.com"
                     value={formData.syslogHost}
@@ -463,6 +568,13 @@ export function SiemIntegrationSettings() {
                     value={formData.syslogPort}
                     onChange={(e) => setFormData({ ...formData, syslogPort: parseInt(e.target.value) || 514 })}
                   />
+=======
+                  <Input placeholder="syslog.example.com" value={formData.syslogHost} onChange={(e) => setFormData({ ...formData, syslogHost: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Port</Label>
+                  <Input type="number" value={formData.syslogPort} onChange={(e) => setFormData({ ...formData, syslogPort: parseInt(e.target.value) || 514 })} />
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                 </div>
               </div>
             )}
@@ -470,9 +582,13 @@ export function SiemIntegrationSettings() {
             <div className="space-y-2">
               <Label>Log Format</Label>
               <Select value={formData.logFormat} onValueChange={(v) => setFormData({ ...formData, logFormat: v })}>
+<<<<<<< HEAD
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
+=======
+                <SelectTrigger><SelectValue /></SelectTrigger>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                 <SelectContent>
                   <SelectItem value="JSON">JSON</SelectItem>
                   <SelectItem value="CEF">CEF (ArcSight)</SelectItem>
@@ -483,7 +599,10 @@ export function SiemIntegrationSettings() {
             </div>
 
             <Separator />
+<<<<<<< HEAD
 
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             <Label>Log Categories</Label>
             <div className="grid grid-cols-2 gap-2">
               <div className="flex items-center justify-between">
@@ -509,7 +628,10 @@ export function SiemIntegrationSettings() {
             </div>
 
             <Separator />
+<<<<<<< HEAD
 
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             <div className="flex items-center justify-between">
               <Label>Enable Integration</Label>
               <Switch checked={formData.isEnabled} onCheckedChange={(v) => setFormData({ ...formData, isEnabled: v })} />

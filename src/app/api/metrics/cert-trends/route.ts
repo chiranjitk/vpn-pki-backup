@@ -22,6 +22,7 @@ export async function GET() {
       },
     })
     
+<<<<<<< HEAD
     // Get server certificates too
     const serverCerts = await db.serverCertificate.findMany({
       where: {
@@ -36,6 +37,8 @@ export async function GET() {
       },
     })
     
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     // Get revocations by month
     const revocations = await db.revocation.findMany({
       where: {
@@ -60,9 +63,13 @@ export async function GET() {
     }
     
     // Count certificates issued by month
+<<<<<<< HEAD
     const allCerts = [...certificates, ...serverCerts]
     
     allCerts.forEach((cert) => {
+=======
+    certificates.forEach((cert) => {
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       const month = cert.createdAt.toLocaleString('default', { month: 'short' })
       if (months[month]) {
         months[month].issued++

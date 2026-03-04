@@ -117,3 +117,31 @@ export function withCsrfProtection(
 }
 
 export { tokenStore as csrfTokenStore };
+<<<<<<< HEAD
+=======
+
+/**
+ * Get CSRF token from cookie
+ */
+export function getCsrfTokenFromCookie(request: NextRequest): string | null {
+  return request.cookies.get(CSRF_COOKIE_NAME)?.value || null;
+}
+
+/**
+ * Refresh CSRF token if it's about to expire (within 10 minutes)
+ */
+export async function refreshCsrfTokenIfNeeded(request: NextRequest): Promise<{ token: string; expiresAt: number } | null> {
+  const sessionId = await getSessionId(request);
+  const entry = tokenStore.get(sessionId);
+  
+  if (!entry) return null;
+  
+  // If token expires in less than 10 minutes, refresh it
+  const tenMinutes = 10 * 60 * 1000;
+  if (entry.expiresAt - Date.now() < tenMinutes) {
+    return null; // Let caller create new token
+  }
+  
+  return { token: entry.token, expiresAt: entry.expiresAt };
+}
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124

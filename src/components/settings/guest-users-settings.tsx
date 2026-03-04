@@ -2,15 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import {
+<<<<<<< HEAD
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+=======
+  Card, CardContent, CardDescription, CardHeader, CardTitle,
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+<<<<<<< HEAD
 import { Switch } from '@/components/ui/switch'
 import {
   Select,
@@ -58,12 +63,32 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+=======
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table'
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  UserPlus, UserX, Clock, CheckCircle2, XCircle, AlertTriangle, Loader2, Calendar, MoreHorizontal, Ban, RefreshCw, Trash2,
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { Separator } from '@/components/ui/separator'
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 
 interface GuestUser {
   id: string
   username: string
   email: string
   fullName: string | null
+<<<<<<< HEAD
   phone: string | null
   company: string | null
   purpose: string | null
@@ -81,6 +106,14 @@ interface GuestUser {
   certificateId: string | null
   lastAccessAt: string | null
   accessCount: number
+=======
+  company: string | null
+  purpose: string | null
+  sponsorName: string | null
+  accessStartDate: string
+  accessEndDate: string
+  status: 'PENDING' | 'APPROVED' | 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'DENIED'
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   createdAt: string
 }
 
@@ -93,6 +126,7 @@ export function GuestUsersSettings() {
   const [saving, setSaving] = useState(false)
   const [filter, setFilter] = useState<string>('all')
 
+<<<<<<< HEAD
   // Form state
   const [formData, setFormData] = useState({
     username: '',
@@ -114,6 +148,18 @@ export function GuestUsersSettings() {
   useEffect(() => {
     fetchGuests()
   }, [filter])
+=======
+  const [formData, setFormData] = useState({
+    username: '', email: '', fullName: '', company: '', purpose: '',
+    sponsorName: '', sponsorEmail: '',
+    accessStartDate: new Date().toISOString().split('T')[0],
+    accessEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    maxSessions: 1, bandwidthLimit: 1000,
+  })
+  const [extendDays, setExtendDays] = useState(7)
+
+  useEffect(() => { fetchGuests() }, [filter])
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 
   const fetchGuests = async () => {
     setLoading(true)
@@ -136,7 +182,10 @@ export function GuestUsersSettings() {
       toast.error('Please fill all required fields')
       return
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     setSaving(true)
     try {
       const response = await fetch('/api/guest-users', {
@@ -144,7 +193,10 @@ export function GuestUsersSettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
+<<<<<<< HEAD
 
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       if (response.ok) {
         toast.success('Guest user created successfully')
         setShowAddDialog(false)
@@ -163,15 +215,23 @@ export function GuestUsersSettings() {
 
   const handleApprove = async (guest: GuestUser) => {
     try {
+<<<<<<< HEAD
       const response = await fetch(`/api/guest-users/${guest.id}/approve`, {
         method: 'POST',
       })
+=======
+      const response = await fetch(`/api/guest-users/${guest.id}/approve`, { method: 'POST' })
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       if (response.ok) {
         toast.success('Guest user approved')
         fetchGuests()
       } else {
+<<<<<<< HEAD
         const error = await response.json()
         toast.error(error.error || 'Failed to approve')
+=======
+        toast.error('Failed to approve')
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       }
     } catch (error) {
       toast.error('Failed to approve guest user')
@@ -180,6 +240,7 @@ export function GuestUsersSettings() {
 
   const handleRevoke = async (guest: GuestUser) => {
     if (!confirm(`Revoke access for ${guest.username}?`)) return
+<<<<<<< HEAD
 
     try {
       const response = await fetch(`/api/guest-users/${guest.id}/revoke`, {
@@ -187,6 +248,10 @@ export function GuestUsersSettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: 'Administrative revocation' }),
       })
+=======
+    try {
+      const response = await fetch(`/api/guest-users/${guest.id}/revoke`, { method: 'POST' })
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       if (response.ok) {
         toast.success('Guest access revoked')
         fetchGuests()
@@ -198,7 +263,10 @@ export function GuestUsersSettings() {
 
   const handleExtend = async () => {
     if (!selectedGuest) return
+<<<<<<< HEAD
 
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     setSaving(true)
     try {
       const response = await fetch(`/api/guest-users/${selectedGuest.id}/extend`, {
@@ -220,11 +288,16 @@ export function GuestUsersSettings() {
 
   const handleDelete = async (guest: GuestUser) => {
     if (!confirm(`Delete guest user ${guest.username}?`)) return
+<<<<<<< HEAD
 
     try {
       const response = await fetch(`/api/guest-users/${guest.id}`, {
         method: 'DELETE',
       })
+=======
+    try {
+      const response = await fetch(`/api/guest-users/${guest.id}`, { method: 'DELETE' })
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       if (response.ok) {
         toast.success('Guest user deleted')
         fetchGuests()
@@ -236,6 +309,7 @@ export function GuestUsersSettings() {
 
   const resetForm = () => {
     setFormData({
+<<<<<<< HEAD
       username: '',
       email: '',
       fullName: '',
@@ -249,6 +323,13 @@ export function GuestUsersSettings() {
       maxSessions: 1,
       bandwidthLimit: 1000,
       allowedNetworks: '',
+=======
+      username: '', email: '', fullName: '', company: '', purpose: '',
+      sponsorName: '', sponsorEmail: '',
+      accessStartDate: new Date().toISOString().split('T')[0],
+      accessEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      maxSessions: 1, bandwidthLimit: 1000,
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     })
   }
 
@@ -265,6 +346,7 @@ export function GuestUsersSettings() {
   }
 
   const formatDate = (date: string) => new Date(date).toLocaleDateString()
+<<<<<<< HEAD
 
   const getDaysRemaining = (endDate: string) => {
     const end = new Date(endDate)
@@ -276,12 +358,19 @@ export function GuestUsersSettings() {
   return (
     <div className="space-y-6">
       {/* Header */}
+=======
+  const getDaysRemaining = (endDate: string) => Math.ceil((new Date(endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+
+  return (
+    <div className="space-y-6">
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Guest Users</h2>
           <p className="text-muted-foreground">Manage temporary VPN access for external users</p>
         </div>
         <Button onClick={() => { resetForm(); setShowAddDialog(true); }}>
+<<<<<<< HEAD
           <UserPlus className="mr-2 h-4 w-4" />
           Add Guest User
         </Button>
@@ -329,6 +418,22 @@ export function GuestUsersSettings() {
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
+=======
+          <UserPlus className="mr-2 h-4 w-4" />Add Guest User
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card><CardContent className="p-4"><div className="text-2xl font-bold text-amber-500">{guests.filter(g => g.status === 'PENDING').length}</div><p className="text-xs text-muted-foreground">Pending Approval</p></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="text-2xl font-bold text-green-500">{guests.filter(g => g.status === 'ACTIVE' || g.status === 'APPROVED').length}</div><p className="text-xs text-muted-foreground">Active</p></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="text-2xl font-bold text-gray-500">{guests.filter(g => g.status === 'EXPIRED').length}</div><p className="text-xs text-muted-foreground">Expired</p></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="text-2xl font-bold text-red-500">{guests.filter(g => g.status === 'REVOKED').length}</div><p className="text-xs text-muted-foreground">Revoked</p></CardContent></Card>
+      </div>
+
+      <div className="flex gap-2">
+        <Select value={filter} onValueChange={setFilter}>
+          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by status" /></SelectTrigger>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="PENDING">Pending</SelectItem>
@@ -340,6 +445,7 @@ export function GuestUsersSettings() {
         </Select>
       </div>
 
+<<<<<<< HEAD
       {/* Guest List */}
       <Card>
         <CardContent className="p-0">
@@ -347,6 +453,12 @@ export function GuestUsersSettings() {
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
+=======
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           ) : guests.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <UserPlus className="h-12 w-12 mx-auto mb-2 opacity-50" />
@@ -370,6 +482,7 @@ export function GuestUsersSettings() {
                   return (
                     <TableRow key={guest.id}>
                       <TableCell>
+<<<<<<< HEAD
                         <div>
                           <div className="font-medium">{guest.fullName || guest.username}</div>
                           <div className="text-xs text-muted-foreground">{guest.email}</div>
@@ -383,6 +496,13 @@ export function GuestUsersSettings() {
                             <div className="text-xs text-muted-foreground">{guest.sponsorEmail}</div>
                           )}
                         </div>
+=======
+                        <div><div className="font-medium">{guest.fullName || guest.username}</div><div className="text-xs text-muted-foreground">{guest.email}</div></div>
+                      </TableCell>
+                      <TableCell>{guest.company || '-'}</TableCell>
+                      <TableCell>
+                        <div><div>{guest.sponsorName || '-'}</div></div>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                       </TableCell>
                       <TableCell>
                         <div>
@@ -391,9 +511,13 @@ export function GuestUsersSettings() {
                             {formatDate(guest.accessStartDate)} - {formatDate(guest.accessEndDate)}
                           </div>
                           {daysRemaining > 0 && daysRemaining <= 7 && (
+<<<<<<< HEAD
                             <div className="text-xs text-amber-500 mt-1">
                               {daysRemaining} days remaining
                             </div>
+=======
+                            <div className="text-xs text-amber-500 mt-1">{daysRemaining} days remaining</div>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                           )}
                           {daysRemaining <= 0 && guest.status !== 'EXPIRED' && (
                             <div className="text-xs text-red-500 mt-1">Expired</div>
@@ -408,32 +532,51 @@ export function GuestUsersSettings() {
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
+<<<<<<< HEAD
                             <Button variant="ghost" size="sm">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
+=======
+                            <Button variant="ghost" size="sm"><MoreHorizontal className="h-4 w-4" /></Button>
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             {guest.status === 'PENDING' && (
                               <DropdownMenuItem onClick={() => handleApprove(guest)}>
+<<<<<<< HEAD
                                 <CheckCircle2 className="mr-2 h-4 w-4" />
                                 Approve
+=======
+                                <CheckCircle2 className="mr-2 h-4 w-4" />Approve
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                               </DropdownMenuItem>
                             )}
                             {(guest.status === 'APPROVED' || guest.status === 'ACTIVE') && (
                               <>
                                 <DropdownMenuItem onClick={() => { setSelectedGuest(guest); setShowExtendDialog(true); }}>
+<<<<<<< HEAD
                                   <RefreshCw className="mr-2 h-4 w-4" />
                                   Extend Access
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleRevoke(guest)} className="text-destructive">
                                   <Ban className="mr-2 h-4 w-4" />
                                   Revoke Access
+=======
+                                  <RefreshCw className="mr-2 h-4 w-4" />Extend Access
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleRevoke(guest)} className="text-destructive">
+                                  <Ban className="mr-2 h-4 w-4" />Revoke Access
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                                 </DropdownMenuItem>
                               </>
                             )}
                             <DropdownMenuItem onClick={() => handleDelete(guest)} className="text-destructive">
+<<<<<<< HEAD
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete
+=======
+                              <Trash2 className="mr-2 h-4 w-4" />Delete
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -447,7 +590,10 @@ export function GuestUsersSettings() {
         </CardContent>
       </Card>
 
+<<<<<<< HEAD
       {/* Add Guest Dialog */}
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -458,6 +604,7 @@ export function GuestUsersSettings() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Username *</Label>
+<<<<<<< HEAD
                 <Input
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
@@ -470,11 +617,19 @@ export function GuestUsersSettings() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
+=======
+                <Input value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Email *</Label>
+                <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Full Name</Label>
+<<<<<<< HEAD
                 <Input
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
@@ -502,6 +657,13 @@ export function GuestUsersSettings() {
                   value={formData.purpose}
                   onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
                 />
+=======
+                <Input value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Company</Label>
+                <Input value={formData.company} onChange={(e) => setFormData({ ...formData, company: e.target.value })} />
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
               </div>
             </div>
             <Separator />
@@ -509,6 +671,7 @@ export function GuestUsersSettings() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Sponsor Name</Label>
+<<<<<<< HEAD
                 <Input
                   value={formData.sponsorName}
                   onChange={(e) => setFormData({ ...formData, sponsorName: e.target.value })}
@@ -521,6 +684,9 @@ export function GuestUsersSettings() {
                   value={formData.sponsorEmail}
                   onChange={(e) => setFormData({ ...formData, sponsorEmail: e.target.value })}
                 />
+=======
+                <Input value={formData.sponsorName} onChange={(e) => setFormData({ ...formData, sponsorName: e.target.value })} />
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
               </div>
             </div>
             <Separator />
@@ -528,6 +694,7 @@ export function GuestUsersSettings() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Start Date *</Label>
+<<<<<<< HEAD
                 <Input
                   type="date"
                   value={formData.accessStartDate}
@@ -561,6 +728,13 @@ export function GuestUsersSettings() {
                   value={formData.bandwidthLimit}
                   onChange={(e) => setFormData({ ...formData, bandwidthLimit: parseInt(e.target.value) || 1000 })}
                 />
+=======
+                <Input type="date" value={formData.accessStartDate} onChange={(e) => setFormData({ ...formData, accessStartDate: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>End Date *</Label>
+                <Input type="date" value={formData.accessEndDate} onChange={(e) => setFormData({ ...formData, accessEndDate: e.target.value })} />
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
               </div>
             </div>
           </div>
@@ -574,7 +748,10 @@ export function GuestUsersSettings() {
         </DialogContent>
       </Dialog>
 
+<<<<<<< HEAD
       {/* Extend Dialog */}
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       <Dialog open={showExtendDialog} onOpenChange={setShowExtendDialog}>
         <DialogContent>
           <DialogHeader>
@@ -583,6 +760,7 @@ export function GuestUsersSettings() {
           </DialogHeader>
           <div className="py-4">
             <Label>Extend by (days)</Label>
+<<<<<<< HEAD
             <Input
               type="number"
               min={1}
@@ -590,6 +768,9 @@ export function GuestUsersSettings() {
               value={extendDays}
               onChange={(e) => setExtendDays(parseInt(e.target.value) || 7)}
             />
+=======
+            <Input type="number" min={1} max={90} value={extendDays} onChange={(e) => setExtendDays(parseInt(e.target.value) || 7)} />
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowExtendDialog(false)}>Cancel</Button>
@@ -603,7 +784,10 @@ export function GuestUsersSettings() {
     </div>
   )
 }
+<<<<<<< HEAD
 
 // Import needed
 import { Separator } from '@/components/ui/separator'
 import { Trash2 } from 'lucide-react'
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124

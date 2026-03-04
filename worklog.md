@@ -1377,6 +1377,7 @@ Update the PKI Content component to add CSR generation dialog, improve MODE A ex
 
 ---
 
+<<<<<<< HEAD
 
 ---
 ## Task ID: guest-users-api
@@ -3299,3 +3300,5 @@ Updated:
 - src/components/nat/nat-policies-content.tsx (interface fetching)
 - src/components/layout/app-sidebar.tsx (navigation link)
 ```
+=======
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124

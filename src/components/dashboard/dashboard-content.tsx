@@ -675,7 +675,11 @@ export function DashboardContent() {
             </div>
             <div className="flex gap-2 pt-2">
               <Button variant="outline" size="sm" className="flex-1" onClick={() => {
+<<<<<<< HEAD
                 fetch('/api/vpn', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reload' }) }).then(() => toast.success('VPN reload initiated'))
+=======
+                fetch('/api/vpn', { method: 'POST', body: JSON.stringify({ action: 'reload' }) }).then(() => toast.success('VPN reload initiated'))
+>>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
               }}>
                 <RefreshCw className="mr-2 h-3 w-3" />
                 Reload
