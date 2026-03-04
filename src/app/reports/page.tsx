@@ -111,7 +111,7 @@ export default function ReportsPage() {
   const [username, setUsername] = useState('')
   const [ipAddress, setIpAddress] = useState('')
   const [status, setStatus] = useState('all')
-  const [country, setCountry] = useState('all')
+  const [country, setCountry] = useState('')
   
   // Available filter options
   const [countries, setCountries] = useState<string[]>([])
@@ -126,7 +126,7 @@ export default function ReportsPage() {
       if (username) params.append('username', username)
       if (ipAddress) params.append('clientIp', ipAddress)
       if (status !== 'all') params.append('status', status)
-      if (country !== 'all') params.append('country', country)
+      if (country) params.append('country', country)
       params.append('limit', '100')
 
       const response = await fetch(`/api/reports/sessions?${params}`)
@@ -165,7 +165,7 @@ export default function ReportsPage() {
     setUsername('')
     setIpAddress('')
     setStatus('all')
-    setCountry('all')
+    setCountry('')
     setTimeout(fetchSessions, 100)
   }
 
@@ -178,7 +178,7 @@ export default function ReportsPage() {
       if (username) params.append('username', username)
       if (ipAddress) params.append('clientIp', ipAddress)
       if (status !== 'all') params.append('status', status)
-      if (country !== 'all') params.append('country', country)
+      if (country) params.append('country', country)
       params.append('format', 'csv')
 
       const response = await fetch(`/api/reports/sessions?${params}`)
@@ -213,7 +213,7 @@ export default function ReportsPage() {
       if (username) params.append('username', username)
       if (ipAddress) params.append('clientIp', ipAddress)
       if (status !== 'all') params.append('status', status)
-      if (country !== 'all') params.append('country', country)
+      if (country) params.append('country', country)
       params.append('format', 'pdf')
 
       const response = await fetch(`/api/reports/sessions?${params}`)
@@ -396,7 +396,7 @@ export default function ReportsPage() {
                   <SelectValue placeholder="All countries" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Countries</SelectItem>
+                  <SelectItem value="">All Countries</SelectItem>
                   {countries.map((c) => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}

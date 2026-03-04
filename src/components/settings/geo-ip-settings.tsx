@@ -2,35 +2,26 @@
 
 import { useState, useEffect } from 'react'
 import {
-<<<<<<< HEAD
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-=======
-  Card, CardContent, CardDescription, CardHeader, CardTitle,
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import {
-<<<<<<< HEAD
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-=======
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 } from '@/components/ui/select'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import {
-<<<<<<< HEAD
   Table,
   TableBody,
   TableCell,
@@ -61,15 +52,6 @@ import {
   Ban,
   UserX,
   Clock,
-=======
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  Globe, Shield, ShieldCheck, AlertTriangle, CheckCircle2, XCircle, Plus, Trash2, Edit, Loader2, MapPin, Ban,
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -80,10 +62,7 @@ interface GeoRestriction {
   description: string | null
   isEnabled: boolean
   action: 'BLOCK' | 'ALLOW'
-<<<<<<< HEAD
   source: string
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   createdAt: string
 }
 
@@ -106,31 +85,21 @@ export function GeoIpSettings() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   
-<<<<<<< HEAD
   // Form state
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   const [formType, setFormType] = useState<'COUNTRY' | 'IP_ADDRESS' | 'IP_RANGE' | 'ASN'>('COUNTRY')
   const [formValue, setFormValue] = useState('')
   const [formDescription, setFormDescription] = useState('')
   const [formAction, setFormAction] = useState<'BLOCK' | 'ALLOW'>('BLOCK')
   const [formEnabled, setFormEnabled] = useState(true)
 
-<<<<<<< HEAD
   // Check IP state
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   const [checkIp, setCheckIp] = useState('')
   const [checkingIp, setCheckingIp] = useState(false)
   const [checkResult, setCheckResult] = useState<{ blocked: boolean; reason?: string } | null>(null)
 
-<<<<<<< HEAD
   useEffect(() => {
     fetchRestrictions()
   }, [])
-=======
-  useEffect(() => { fetchRestrictions() }, [])
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 
   const fetchRestrictions = async () => {
     setLoading(true)
@@ -153,10 +122,7 @@ export function GeoIpSettings() {
       toast.error('Value is required')
       return
     }
-<<<<<<< HEAD
 
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     setSaving(true)
     try {
       const url = editingId ? `/api/geo-restrictions/${editingId}` : '/api/geo-restrictions'
@@ -202,10 +168,7 @@ export function GeoIpSettings() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this restriction?')) return
-<<<<<<< HEAD
 
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     try {
       const response = await fetch(`/api/geo-restrictions/${id}`, { method: 'DELETE' })
       if (response.ok) {
@@ -224,13 +187,9 @@ export function GeoIpSettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isEnabled: !isEnabled }),
       })
-<<<<<<< HEAD
       if (response.ok) {
         fetchRestrictions()
       }
-=======
-      if (response.ok) fetchRestrictions()
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     } catch (error) {
       toast.error('Failed to update restriction')
     }
@@ -241,10 +200,7 @@ export function GeoIpSettings() {
       toast.error('Please enter an IP address')
       return
     }
-<<<<<<< HEAD
 
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     setCheckingIp(true)
     setCheckResult(null)
     try {
@@ -285,7 +241,6 @@ export function GeoIpSettings() {
 
   return (
     <div className="space-y-6">
-<<<<<<< HEAD
       {/* Statistics */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -317,17 +272,6 @@ export function GeoIpSettings() {
       )}
 
       {/* IP Check Tool */}
-=======
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card><CardContent className="p-4"><div className="text-2xl font-bold">{stats.total}</div><p className="text-xs text-muted-foreground">Total Rules</p></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-2xl font-bold text-red-500">{stats.blocked}</div><p className="text-xs text-muted-foreground">Blocked</p></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-2xl font-bold text-green-500">{stats.allowed}</div><p className="text-xs text-muted-foreground">Whitelisted</p></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-2xl font-bold text-amber-500">{stats.countries}</div><p className="text-xs text-muted-foreground">Countries</p></CardContent></Card>
-        </div>
-      )}
-
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Check IP Address</CardTitle>
@@ -335,15 +279,11 @@ export function GeoIpSettings() {
         </CardHeader>
         <CardContent>
           <div className="flex gap-2">
-<<<<<<< HEAD
             <Input
               placeholder="Enter IP address to check"
               value={checkIp}
               onChange={(e) => setCheckIp(e.target.value)}
             />
-=======
-            <Input placeholder="Enter IP address to check" value={checkIp} onChange={(e) => setCheckIp(e.target.value)} />
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             <Button variant="outline" onClick={handleCheckIp} disabled={checkingIp}>
               {checkingIp ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Check'}
             </Button>
@@ -358,10 +298,7 @@ export function GeoIpSettings() {
         </CardContent>
       </Card>
 
-<<<<<<< HEAD
       {/* Restrictions List */}
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -370,32 +307,21 @@ export function GeoIpSettings() {
               <CardDescription>Block or allow access by country, IP, or network</CardDescription>
             </div>
             <Button onClick={() => { resetForm(); setShowAddDialog(true); }}>
-<<<<<<< HEAD
               <Plus className="mr-2 h-4 w-4" />
               Add Rule
-=======
-              <Plus className="mr-2 h-4 w-4" />Add Rule
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             </Button>
           </div>
         </CardHeader>
         <CardContent>
           {loading ? (
-<<<<<<< HEAD
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-=======
-            <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           ) : restrictions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Globe className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p>No restrictions configured</p>
-<<<<<<< HEAD
               <p className="text-sm">Add rules to block or allow traffic by location</p>
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             </div>
           ) : (
             <div className="rounded-md border">
@@ -434,7 +360,6 @@ export function GeoIpSettings() {
                         </span>
                       </TableCell>
                       <TableCell>
-<<<<<<< HEAD
                         <Switch
                           checked={restriction.isEnabled}
                           onCheckedChange={() => handleToggle(restriction.id, restriction.isEnabled)}
@@ -447,13 +372,6 @@ export function GeoIpSettings() {
                         <Button variant="ghost" size="sm" onClick={() => handleDelete(restriction.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
-=======
-                        <Switch checked={restriction.isEnabled} onCheckedChange={() => handleToggle(restriction.id, restriction.isEnabled)} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(restriction)}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(restriction.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                       </TableCell>
                     </TableRow>
                   ))}
@@ -464,33 +382,22 @@ export function GeoIpSettings() {
         </CardContent>
       </Card>
 
-<<<<<<< HEAD
       {/* Add/Edit Dialog */}
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingId ? 'Edit Restriction' : 'Add Restriction'}</DialogTitle>
-<<<<<<< HEAD
             <DialogDescription>
               Configure a new geo/IP restriction rule
             </DialogDescription>
-=======
-            <DialogDescription>Configure a new geo/IP restriction rule</DialogDescription>
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Type</Label>
               <Select value={formType} onValueChange={(v) => setFormType(v as typeof formType)}>
-<<<<<<< HEAD
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-=======
-                <SelectTrigger><SelectValue /></SelectTrigger>
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                 <SelectContent>
                   <SelectItem value="COUNTRY">Country (ISO code)</SelectItem>
                   <SelectItem value="IP_ADDRESS">IP Address</SelectItem>
@@ -499,10 +406,7 @@ export function GeoIpSettings() {
                 </SelectContent>
               </Select>
             </div>
-<<<<<<< HEAD
             
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             <div className="space-y-2">
               <Label>Value</Label>
               <Input
@@ -510,7 +414,6 @@ export function GeoIpSettings() {
                 value={formValue}
                 onChange={(e) => setFormValue(e.target.value)}
               />
-<<<<<<< HEAD
               {formType === 'COUNTRY' && (
                 <p className="text-xs text-muted-foreground">Enter ISO 3166-1 alpha-2 country code</p>
               )}
@@ -530,27 +433,13 @@ export function GeoIpSettings() {
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-=======
-            </div>
-            <div className="space-y-2">
-              <Label>Description (optional)</Label>
-              <Input value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Action</Label>
-              <Select value={formAction} onValueChange={(v) => setFormAction(v as typeof formAction)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                 <SelectContent>
                   <SelectItem value="BLOCK">Block</SelectItem>
                   <SelectItem value="ALLOW">Allow (Whitelist)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-<<<<<<< HEAD
 
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             <div className="flex items-center justify-between">
               <Label>Enabled</Label>
               <Switch checked={formEnabled} onCheckedChange={setFormEnabled} />
@@ -559,11 +448,7 @@ export function GeoIpSettings() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
             <Button onClick={handleSave} disabled={saving}>
-<<<<<<< HEAD
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-=======
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
               {editingId ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-<<<<<<< HEAD
 import { GuestStatus } from '@prisma/client'
 
 // GET /api/guest-users/[id] - Get a specific guest user
@@ -292,16 +291,12 @@ export async function PUT(
 }
 
 // DELETE /api/guest-users/[id] - Delete a guest user
-=======
-
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
-<<<<<<< HEAD
 
     // Check if guest user exists
     const existingGuest = await db.guestUser.findUnique({
@@ -359,27 +354,5 @@ export async function DELETE(
       { success: false, error: 'Failed to delete guest user', message: error.message },
       { status: 500 }
     )
-=======
-    await db.guestUser.delete({ where: { id } })
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete guest user' }, { status: 500 })
-  }
-}
-
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params
-    const guest = await db.guestUser.findUnique({ where: { id } })
-    if (!guest) {
-      return NextResponse.json({ error: 'Guest user not found' }, { status: 404 })
-    }
-    return NextResponse.json({ guest })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch guest user' }, { status: 500 })
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   }
 }

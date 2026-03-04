@@ -13,7 +13,6 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { execSync, exec } from 'child_process'
 import { promisify } from 'util'
-<<<<<<< HEAD
 import { getPKIPaths } from './config'
 
 const execAsync = promisify(exec)
@@ -61,34 +60,6 @@ export const STRONGSWAN_PATHS = {
   get swanctlConf() { return getStrongSwanPaths().swanctlConf },
   get strongswanConf() { return getStrongSwanPaths().strongswanConf },
   get ipsecD() { return getStrongSwanPaths().ipsecD },
-=======
-
-const execAsync = promisify(exec)
-
-// strongSwan 6.0.1 standard paths
-export const STRONGSWAN_PATHS = {
-  swanctlDir: '/etc/swanctl',
-  
-  // CA certificates - CRITICAL: This is where trusted CAs go for client cert verification
-  x509caDir: '/etc/swanctl/x509ca',
-  
-  // End entity certificates (server certs, NOT CA certs)
-  x509Dir: '/etc/swanctl/x509',
-  
-  // Private keys
-  privateDir: '/etc/swanctl/private',
-  
-  // CRL files
-  crlDir: '/etc/swanctl/x509crl',
-  
-  // Configuration
-  confDir: '/etc/swanctl/conf.d',
-  swanctlConf: '/etc/swanctl/swanctl.conf',
-  strongswanConf: '/etc/strongswan.conf',
-  
-  // Legacy ipsec.d (not used in modern strongSwan)
-  ipsecD: '/etc/ipsec.d',
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 }
 
 // Connection Configuration
@@ -163,7 +134,6 @@ export async function getVPNStatus(): Promise<VPNServiceStatus> {
     }
     const running = statusOutput.trim() === 'active'
     
-<<<<<<< HEAD
     // Get active connections count using swanctl --list-sas
     // Parse the output to count actual IKE SAs (lines with IKEv2)
     let activeConnections = 0
@@ -173,15 +143,6 @@ export async function getVPNStatus(): Promise<VPNServiceStatus> {
       // NOT child SA lines like "  net: #N, reqid..."
       const ikeSaMatches = listOutput.match(/^\S+:\s*#\d+,\s*\w+,\s*IKEv2/gm)
       activeConnections = ikeSaMatches ? ikeSaMatches.length : 0
-=======
-    // Get active connections count
-    let activeConnections = 0
-    try {
-      const { stdout: listOutput } = await execAsync('swanctl --list-sas 2>/dev/null || echo ""')
-      // Count unique connection names
-      const connections = listOutput.match(/\[\d+\]/g) || []
-      activeConnections = connections.length
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     } catch {
       activeConnections = 0
     }
@@ -269,7 +230,6 @@ export async function restartStrongSwan(): Promise<{ success: boolean; message: 
  * Ensure all strongSwan directories exist with correct permissions
  */
 export function ensureStrongSwanDirs(): void {
-<<<<<<< HEAD
   const paths = getStrongSwanPaths()
   const dirs = [
     { path: paths.swanctlDir, mode: 0o755 },
@@ -278,15 +238,6 @@ export function ensureStrongSwanDirs(): void {
     { path: paths.privateDir, mode: 0o700 },  // Private keys - more restrictive
     { path: paths.crlDir, mode: 0o755 },      // CRLs - world readable
     { path: paths.confDir, mode: 0o755 },
-=======
-  const dirs = [
-    { path: STRONGSWAN_PATHS.swanctlDir, mode: 0o755 },
-    { path: STRONGSWAN_PATHS.x509caDir, mode: 0o755 },   // CA certs - world readable
-    { path: STRONGSWAN_PATHS.x509Dir, mode: 0o755 },     // Server certs - world readable
-    { path: STRONGSWAN_PATHS.privateDir, mode: 0o700 },  // Private keys - root only
-    { path: STRONGSWAN_PATHS.crlDir, mode: 0o755 },      // CRLs - world readable
-    { path: STRONGSWAN_PATHS.confDir, mode: 0o755 },
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   ]
   
   dirs.forEach(({ path: dir, mode }) => {
@@ -373,14 +324,9 @@ export function deployCACertificate(caCertPath: string, name?: string): {
       return { success: false, error: `Invalid CA certificate: ${validation.error}` }
     }
     
-<<<<<<< HEAD
     const paths = getStrongSwanPaths()
     const certName = name || path.basename(caCertPath, '.pem')
     const destPath = path.join(paths.x509caDir, `${certName}.pem`)
-=======
-    const certName = name || path.basename(caCertPath, '.pem')
-    const destPath = path.join(STRONGSWAN_PATHS.x509caDir, `${certName}.pem`)
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     
     // Copy certificate
     fs.copyFileSync(caCertPath, destPath)
@@ -418,16 +364,10 @@ export function deployServerCertificate(
       return { success: false, error: `Invalid private key: ${keyValidation.error}` }
     }
     
-<<<<<<< HEAD
     const paths = getStrongSwanPaths()
     const certName = name || path.basename(certPath, '.pem')
     const certDest = path.join(paths.x509Dir, `${certName}.pem`)
     const keyDest = path.join(paths.privateDir, `${certName}.pem`)
-=======
-    const certName = name || path.basename(certPath, '.pem')
-    const certDest = path.join(STRONGSWAN_PATHS.x509Dir, `${certName}.pem`)
-    const keyDest = path.join(STRONGSWAN_PATHS.privateDir, `${certName}.pem`)
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     
     // Copy files
     fs.copyFileSync(certPath, certDest)
@@ -458,14 +398,9 @@ export function deployCRL(crlPath: string, name?: string): { success: boolean; d
       return { success: false, error: 'CRL file does not exist' }
     }
     
-<<<<<<< HEAD
     const paths = getStrongSwanPaths()
     const crlName = name || path.basename(crlPath, '.pem').replace('.crl', '')
     const destPath = path.join(paths.crlDir, `${crlName}.crl`)
-=======
-    const crlName = name || path.basename(crlPath, '.pem').replace('.crl', '')
-    const destPath = path.join(STRONGSWAN_PATHS.crlDir, `${crlName}.crl`)
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     
     // Copy CRL
     fs.copyFileSync(crlPath, destPath)
@@ -484,12 +419,8 @@ export function deployCRL(crlPath: string, name?: string): { success: boolean; d
  * Remove CA certificate
  */
 export function removeCACertificate(name: string): boolean {
-<<<<<<< HEAD
   const paths = getStrongSwanPaths()
   const certPath = path.join(paths.x509caDir, `${name}.pem`)
-=======
-  const certPath = path.join(STRONGSWAN_PATHS.x509caDir, `${name}.pem`)
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   if (fs.existsSync(certPath)) {
     fs.unlinkSync(certPath)
     return true
@@ -501,14 +432,9 @@ export function removeCACertificate(name: string): boolean {
  * Remove server certificate
  */
 export function removeServerCertificate(name: string): boolean {
-<<<<<<< HEAD
   const paths = getStrongSwanPaths()
   const certPath = path.join(paths.x509Dir, `${name}.pem`)
   const keyPath = path.join(paths.privateDir, `${name}.pem`)
-=======
-  const certPath = path.join(STRONGSWAN_PATHS.x509Dir, `${name}.pem`)
-  const keyPath = path.join(STRONGSWAN_PATHS.privateDir, `${name}.pem`)
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   
   let removed = false
   if (fs.existsSync(certPath)) {
@@ -689,44 +615,28 @@ pluto {
  * Write swanctl.conf
  */
 export function writeSwanctlConf(content: string): void {
-<<<<<<< HEAD
   const paths = getStrongSwanPaths()
   ensureStrongSwanDirs()
   fs.writeFileSync(paths.swanctlConf, content, { mode: 0o644 })
-=======
-  ensureStrongSwanDirs()
-  fs.writeFileSync(STRONGSWAN_PATHS.swanctlConf, content, { mode: 0o644 })
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 }
 
 /**
  * Write strongswan.conf
  */
 export function writeStrongswanConf(content: string): void {
-<<<<<<< HEAD
   const paths = getStrongSwanPaths()
   fs.writeFileSync(paths.strongswanConf, content, { mode: 0o644 })
-=======
-  fs.writeFileSync(STRONGSWAN_PATHS.strongswanConf, content, { mode: 0o644 })
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 }
 
 /**
  * List installed CA certificates in x509ca
  */
 export function listCACertificates(): string[] {
-<<<<<<< HEAD
   const paths = getStrongSwanPaths()
   if (!fs.existsSync(paths.x509caDir)) {
     return []
   }
   return fs.readdirSync(paths.x509caDir)
-=======
-  if (!fs.existsSync(STRONGSWAN_PATHS.x509caDir)) {
-    return []
-  }
-  return fs.readdirSync(STRONGSWAN_PATHS.x509caDir)
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     .filter(f => f.endsWith('.pem'))
     .map(f => path.basename(f, '.pem'))
 }
@@ -735,18 +645,11 @@ export function listCACertificates(): string[] {
  * List installed server certificates in x509
  */
 export function listServerCertificates(): string[] {
-<<<<<<< HEAD
   const paths = getStrongSwanPaths()
   if (!fs.existsSync(paths.x509Dir)) {
     return []
   }
   return fs.readdirSync(paths.x509Dir)
-=======
-  if (!fs.existsSync(STRONGSWAN_PATHS.x509Dir)) {
-    return []
-  }
-  return fs.readdirSync(STRONGSWAN_PATHS.x509Dir)
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     .filter(f => f.endsWith('.pem'))
     .map(f => path.basename(f, '.pem'))
 }
@@ -755,18 +658,11 @@ export function listServerCertificates(): string[] {
  * List installed CRLs
  */
 export function listCRLs(): string[] {
-<<<<<<< HEAD
   const paths = getStrongSwanPaths()
   if (!fs.existsSync(paths.crlDir)) {
     return []
   }
   return fs.readdirSync(paths.crlDir)
-=======
-  if (!fs.existsSync(STRONGSWAN_PATHS.crlDir)) {
-    return []
-  }
-  return fs.readdirSync(STRONGSWAN_PATHS.crlDir)
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     .filter(f => f.endsWith('.pem') || f.endsWith('.crl'))
     .map(f => path.basename(f))
 }
@@ -781,10 +677,7 @@ export function verifyDeployment(): {
   errors: string[]
   warnings: string[]
 } {
-<<<<<<< HEAD
   const paths = getStrongSwanPaths()
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   const errors: string[] = []
   const warnings: string[] = []
   
@@ -792,30 +685,18 @@ export function verifyDeployment(): {
   const caCerts = listCACertificates()
   const caDeployed = caCerts.length > 0
   if (!caDeployed) {
-<<<<<<< HEAD
     errors.push(`No CA certificate found in ${paths.x509caDir}`)
-=======
-    errors.push('No CA certificate found in /etc/swanctl/x509ca/')
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   }
   
   // Check CRL
   const crls = listCRLs()
   const crlDeployed = crls.length > 0
   if (!crlDeployed) {
-<<<<<<< HEAD
     warnings.push(`No CRL found in ${paths.crlDir} - certificate status checking disabled`)
   }
   
   // Check swanctl.conf
   const configExists = fs.existsSync(paths.swanctlConf)
-=======
-    warnings.push('No CRL found in /etc/swanctl/x509crl/ - certificate status checking disabled')
-  }
-  
-  // Check swanctl.conf
-  const configExists = fs.existsSync(STRONGSWAN_PATHS.swanctlConf)
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   if (!configExists) {
     errors.push('swanctl.conf not found')
   }

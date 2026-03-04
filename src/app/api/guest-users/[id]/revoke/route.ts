@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-<<<<<<< HEAD
 import { GuestStatus } from '@prisma/client'
 
 // POST /api/guest-users/[id]/revoke - Revoke guest user access
-=======
-
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
-<<<<<<< HEAD
     const body = await request.json().catch(() => ({}))
 
     // Check if guest user exists
@@ -137,18 +132,5 @@ export async function POST(
       { success: false, error: 'Failed to revoke guest access', message: error.message },
       { status: 500 }
     )
-=======
-    const body = await request.json()
-    
-    const guest = await db.guestUser.update({
-      where: { id },
-      data: {
-        status: 'REVOKED',
-      }
-    })
-    return NextResponse.json({ success: true, guest })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to revoke guest user' }, { status: 500 })
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   }
 }

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-<<<<<<< HEAD
 import { RestrictionType, RestrictionAction } from '@prisma/client'
 
 // IPv4 validation regex
@@ -100,16 +99,11 @@ function validateRestrictionValue(type: RestrictionType, value: string): { valid
 
 // GET - Get a single geo/IP restriction
 export async function GET(
-=======
-
-export async function DELETE(
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
-<<<<<<< HEAD
 
     const restriction = await db.geoIpRestriction.findUnique({
       where: { id },
@@ -127,16 +121,6 @@ export async function DELETE(
 }
 
 // PUT - Update a geo/IP restriction
-=======
-    await db.geoIpRestriction.delete({ where: { id } })
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Failed to delete restriction:', error)
-    return NextResponse.json({ error: 'Failed to delete restriction' }, { status: 500 })
-  }
-}
-
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -144,7 +128,6 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-<<<<<<< HEAD
     const { type, value, description, action, isEnabled, source } = body
 
     // Check if restriction exists
@@ -389,17 +372,5 @@ export async function DELETE(
   } catch (error) {
     console.error('Delete geo restriction error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-=======
-    
-    const restriction = await db.geoIpRestriction.update({
-      where: { id },
-      data: body
-    })
-    
-    return NextResponse.json({ success: true, restriction })
-  } catch (error) {
-    console.error('Failed to update restriction:', error)
-    return NextResponse.json({ error: 'Failed to update restriction' }, { status: 500 })
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   }
 }

@@ -7,20 +7,12 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-<<<<<<< HEAD
-=======
-import { Switch } from '@/components/ui/switch'
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   Shield, ShieldCheck, ShieldAlert, RefreshCw, Terminal, 
-<<<<<<< HEAD
   AlertTriangle, Copy, Info
-=======
-  AlertTriangle, CheckCircle2, Copy, Play, Square, Info
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -56,7 +48,6 @@ export function FirewallSettings() {
       if (response.ok) {
         const data = await response.json()
         setStatus(data)
-<<<<<<< HEAD
         if (data.config) {
           setSshPort(data.config.sshPort || '22')
           setAppPort(data.config.appPort || '3000')
@@ -64,8 +55,6 @@ export function FirewallSettings() {
           setAppRate(data.config.appRate || '150')
           setVpnRate(data.config.vpnRate || '100')
         }
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       }
     } catch (error) {
       console.error('Failed to fetch firewall status:', error)
@@ -84,11 +73,7 @@ export function FirewallSettings() {
     remove: `cd /opt/vpn-pki && sudo ./scripts/firewall-setup.sh remove`,
     status: `sudo ./scripts/firewall-setup.sh status`,
     save: `sudo ./scripts/firewall-setup.sh save`,
-<<<<<<< HEAD
     customInstall: `sudo APP_PORT=${appPort} SSH_PORT=${sshPort} SSH_RATE=${sshRate} APP_RATE=${appRate} VPN_RATE=${vpnRate} ./scripts/firewall-setup.sh install`,
-=======
-    customInstall: `sudo APP_PORT=${appPort} SSH_PORT=${sshPort} ./scripts/firewall-setup.sh install`,
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   }
 
   return (
@@ -198,11 +183,7 @@ export function FirewallSettings() {
           <CardDescription>Customize ports and rate limits before installing</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-<<<<<<< HEAD
           <div className="grid gap-4 md:grid-cols-5">
-=======
-          <div className="grid gap-4 md:grid-cols-3">
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             <div className="space-y-2">
               <Label htmlFor="ssh-port">SSH Port</Label>
               <Input 
@@ -230,7 +211,6 @@ export function FirewallSettings() {
                 placeholder="4"
               />
             </div>
-<<<<<<< HEAD
             <div className="space-y-2">
               <Label htmlFor="app-rate">App Rate (req/min)</Label>
               <Input 
@@ -249,8 +229,6 @@ export function FirewallSettings() {
                 placeholder="100"
               />
             </div>
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           </div>
 
           <Separator />

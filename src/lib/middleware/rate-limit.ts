@@ -40,17 +40,10 @@ export const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
     maxRequests: 3,
     message: 'Too many password reset attempts. Please try again later.',
   },
-<<<<<<< HEAD
   // VPN operations - moderate limits
   vpn: {
     windowMs: 60 * 1000, // 1 minute
     maxRequests: 30,
-=======
-  // VPN operations - higher limits for real-time monitoring
-  vpn: {
-    windowMs: 60 * 1000, // 1 minute
-    maxRequests: 120, // Allow 120 requests/min for real-time dashboard updates
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     message: 'Too many VPN operations. Please wait.',
   },
 };

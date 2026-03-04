@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server'
 import { execSync } from 'child_process'
 import fs from 'fs'
-<<<<<<< HEAD
-=======
-import path from 'path'
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 import { db } from '@/lib/db'
 
 interface GeoLocation {
@@ -13,7 +9,6 @@ interface GeoLocation {
   flag: string
   connections: number
   city?: string
-<<<<<<< HEAD
 }
 
 // GeoIP API - Geographical distribution of VPN connections
@@ -32,41 +27,6 @@ export async function GET() {
       countries: merged,
       totalCountries: merged.length,
       geoipDatabase: checkGeoIPDatabase(),
-=======
-  latitude?: number
-  longitude?: number
-}
-
-// Possible GeoIP database locations
-const GEOIP_PATHS = [
-  '/usr/share/GeoIP/GeoLite2-City.mmdb',
-  '/usr/share/GeoIP/GeoIP2-City.mmdb',
-  '/var/lib/GeoIP/GeoLite2-City.mmdb',
-  '/var/lib/GeoIP/GeoIP2-City.mmdb',
-  '/opt/geoip/GeoLite2-City.mmdb',
-  '/usr/local/share/GeoIP/GeoLite2-City.mmdb',
-  '/usr/share/GeoIP/GeoLite2-Country.mmdb',
-  '/var/lib/GeoIP/GeoLite2-Country.mmdb',
-]
-
-// GeoIP API - Geographical distribution of VPN connections
-export async function GET() {
-  try {
-    // Find available GeoIP database
-    const geoipDbPath = findGeoIPDatabase()
-    
-    // Get GeoIP data from VPN sessions
-    const geoData = await getGeoDataFromSessions(geoipDbPath)
-    
-    // Get real-time GeoIP lookup for active connections
-    const activeGeoData = await getActiveConnectionsGeo(geoipDbPath)
-    
-    return NextResponse.json({
-      countries: geoData,
-      activeConnections: activeGeoData,
-      totalCountries: geoData.length,
-      geoipDatabase: geoipDbPath ? 'installed' : 'not_found',
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     })
   } catch (error) {
     console.error('GeoIP error:', error)
@@ -74,7 +34,6 @@ export async function GET() {
   }
 }
 
-<<<<<<< HEAD
 function checkGeoIPDatabase(): string {
   const paths = [
     '/usr/share/GeoIP/GeoLite2-City.mmdb',
@@ -97,54 +56,27 @@ function checkGeoIPDatabase(): string {
 async function getGeoDataFromSessions(): Promise<GeoLocation[]> {
   try {
     // Get all VPN sessions with source IPs (active and recent)
-=======
-function findGeoIPDatabase(): string | null {
-  for (const p of GEOIP_PATHS) {
-    if (fs.existsSync(p)) {
-      return p
-    }
-  }
-  return null
-}
-
-async function getGeoDataFromSessions(geoipDbPath: string | null): Promise<GeoLocation[]> {
-  try {
-    // Get all VPN sessions with source IPs
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     const sessions = await db.vpnSession.findMany({
       where: {
         status: 'ACTIVE',
       },
       select: {
-<<<<<<< HEAD
         clientPublicIp: true,
         username: true,
-=======
-        sourceIp: true,
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       },
     })
     
     if (sessions.length === 0) {
-<<<<<<< HEAD
       return []
-=======
-      // No active sessions, try to get from swanctl
-      return await getActiveConnectionsGeo(geoipDbPath)
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     }
     
     // Group by country using GeoIP lookup
     const countryMap: { [key: string]: GeoLocation } = {}
     
     for (const session of sessions) {
-<<<<<<< HEAD
       if (!session.clientPublicIp) continue
       
       const geo = lookupGeoIP(session.clientPublicIp)
-=======
-      const geo = await lookupGeoIP(session.sourceIp, geoipDbPath)
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       const key = geo.countryCode || 'UNKNOWN'
       
       if (!countryMap[key]) {
@@ -163,7 +95,6 @@ async function getGeoDataFromSessions(geoipDbPath: string | null): Promise<GeoLo
       .sort((a, b) => b.connections - a.connections)
       .slice(0, 10)
   } catch {
-<<<<<<< HEAD
     return []
   }
 }
@@ -171,19 +102,10 @@ async function getGeoDataFromSessions(geoipDbPath: string | null): Promise<GeoLo
 async function getActiveConnectionsGeo(): Promise<GeoLocation[]> {
   const connections: GeoLocation[] = []
   
-=======
-    // Return sample data if database fails
-    return await getActiveConnectionsGeo(geoipDbPath)
-  }
-}
-
-async function getActiveConnectionsGeo(geoipDbPath: string | null): Promise<GeoLocation[]> {
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   try {
     // Try to get active connections from swanctl
     const output = execSync('swanctl --list-sas 2>/dev/null', { 
       encoding: 'utf-8',
-<<<<<<< HEAD
       timeout: 5000,
     })
     
@@ -230,38 +152,6 @@ async function getActiveConnectionsGeo(geoipDbPath: string | null): Promise<GeoL
       })
     }
     
-=======
-      timeout: 5000 
-    })
-    
-    const connections: GeoLocation[] = []
-    const ipRegex = /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/g
-    const ips = output.match(ipRegex) || []
-    const uniqueIps = [...new Set(ips)]
-    
-    // Filter out local/private IPs
-    const publicIps = uniqueIps.filter(ip => !isPrivateIP(ip))
-    
-    if (publicIps.length === 0) {
-      return []
-    }
-    
-    for (const ip of publicIps.slice(0, 20)) {
-      const geo = await lookupGeoIP(ip, geoipDbPath)
-      if (geo.countryCode && geo.countryCode !== 'LOCAL' && geo.countryCode !== 'XX') {
-        connections.push({
-          country: geo.country || 'Unknown',
-          countryCode: geo.countryCode || 'XX',
-          flag: getCountryFlag(geo.countryCode || 'XX'),
-          connections: 1,
-          city: geo.city,
-          latitude: geo.latitude,
-          longitude: geo.longitude,
-        })
-      }
-    }
-    
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     // Aggregate by country
     const countryMap: { [key: string]: GeoLocation } = {}
     for (const conn of connections) {
@@ -280,7 +170,6 @@ async function getActiveConnectionsGeo(geoipDbPath: string | null): Promise<GeoL
   }
 }
 
-<<<<<<< HEAD
 function mergeGeoData(sessions: GeoLocation[], active: GeoLocation[]): GeoLocation[] {
   const merged: { [key: string]: GeoLocation } = {}
   
@@ -298,8 +187,6 @@ function mergeGeoData(sessions: GeoLocation[], active: GeoLocation[]): GeoLocati
     .slice(0, 10)
 }
 
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 function isPrivateIP(ip: string): boolean {
   const parts = ip.split('.').map(Number)
   if (parts.length !== 4) return true
@@ -318,21 +205,11 @@ function isPrivateIP(ip: string): boolean {
   return false
 }
 
-<<<<<<< HEAD
 function lookupGeoIP(ip: string): {
   country?: string
   countryCode?: string
   city?: string
 } {
-=======
-async function lookupGeoIP(ip: string, dbPath: string | null): Promise<{
-  country?: string
-  countryCode?: string
-  city?: string
-  latitude?: number
-  longitude?: number
-}> {
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   // Skip private IPs
   if (isPrivateIP(ip)) {
     return {
@@ -341,7 +218,6 @@ async function lookupGeoIP(ip: string, dbPath: string | null): Promise<{
     }
   }
   
-<<<<<<< HEAD
   // Try mmdblookup with GeoIP database
   const dbPaths = [
     '/usr/share/GeoIP/GeoLite2-City.mmdb',
@@ -366,37 +242,6 @@ async function lookupGeoIP(ip: string, dbPath: string | null): Promise<{
       }
     } catch {
       // Continue to next path
-=======
-  // Try mmdblookup with the found database
-  if (dbPath) {
-    try {
-      const countryOutput = execSync(
-        `mmdblookup --file "${dbPath}" --ip ${ip} registered_country iso_code 2>/dev/null || mmdblookup --file "${dbPath}" --ip ${ip} country iso_code 2>/dev/null`,
-        { encoding: 'utf-8', timeout: 3000 }
-      )
-      
-      const codeMatch = countryOutput.match(/"([^"]+)"/)
-      const countryCode = codeMatch ? codeMatch[1] : undefined
-      
-      if (countryCode && countryCode !== 'XX') {
-        // Get country name
-        let country: string | undefined
-        try {
-          const nameOutput = execSync(
-            `mmdblookup --file "${dbPath}" --ip ${ip} registered_country names en 2>/dev/null || mmdblookup --file "${dbPath}" --ip ${ip} country names en 2>/dev/null`,
-            { encoding: 'utf-8', timeout: 3000 }
-          )
-          const nameMatch = nameOutput.match(/"([^"]+)"/)
-          country = nameMatch ? nameMatch[1] : getCountryName(countryCode)
-        } catch {
-          country = getCountryName(countryCode)
-        }
-        
-        return { country, countryCode }
-      }
-    } catch {
-      // mmdblookup failed, try alternative
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     }
   }
   
@@ -419,46 +264,7 @@ async function lookupGeoIP(ip: string, dbPath: string | null): Promise<{
     // geoiplookup not available
   }
   
-<<<<<<< HEAD
   // Fallback: return empty (will be filtered out)
-=======
-  // Use online API as last resort
-  return await lookupGeoIPOnline(ip)
-}
-
-async function lookupGeoIPOnline(ip: string): Promise<{
-  country?: string
-  countryCode?: string
-  city?: string
-  latitude?: number
-  longitude?: number
-}> {
-  try {
-    // Use free GeoIP API with timeout
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 2000)
-    
-    const response = await fetch(`http://ip-api.com/json/${ip}?fields=country,countryCode,city,lat,lon`, {
-      signal: controller.signal,
-    })
-    
-    clearTimeout(timeoutId)
-    
-    if (response.ok) {
-      const data = await response.json()
-      return {
-        country: data.country,
-        countryCode: data.countryCode,
-        city: data.city,
-        latitude: data.lat,
-        longitude: data.lon,
-      }
-    }
-  } catch {
-    // Ignore errors
-  }
-  
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   return {}
 }
 
@@ -473,11 +279,7 @@ function getCountryName(code: string): string {
     PH: 'Philippines', PK: 'Pakistan', BD: 'Bangladesh', IR: 'Iran', IL: 'Israel',
     SE: 'Sweden', NO: 'Norway', DK: 'Denmark', FI: 'Finland', CH: 'Switzerland',
     AT: 'Austria', BE: 'Belgium', IE: 'Ireland', PT: 'Portugal', CZ: 'Czech Republic',
-<<<<<<< HEAD
     UA: 'Ukraine', RO: 'Romania', GR: 'Greece', HU: 'Hungary',
-=======
-    UA: 'Ukraine', RO: 'Romania', GR: 'Greece', HU: 'Hungary', IL: 'Israel',
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   }
   return countries[code] || code
 }

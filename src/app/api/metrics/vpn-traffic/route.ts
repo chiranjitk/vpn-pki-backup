@@ -111,22 +111,17 @@ function getNetworkInterfaceTraffic(): {
       }
     }
   } catch {
-<<<<<<< HEAD
     // /proc/net/dev not available, try alternative
   }
 
   if (interfaces.length === 0) {
     // Fallback: simulate based on VPN sessions
     return getSimulatedTraffic()
-=======
-    // Return empty if all methods fail
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   }
 
   return { interfaces, totalRx, totalTx }
 }
 
-<<<<<<< HEAD
 function getSimulatedTraffic(): { interfaces: NetworkInterface[]; totalRx: number; totalTx: number } {
   // Simulated for environments without /proc/net/dev
   const baseRx = 1000000000 // 1GB
@@ -141,8 +136,6 @@ function getSimulatedTraffic(): { interfaces: NetworkInterface[]; totalRx: numbe
   }
 }
 
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 function calculateBandwidth(current: { totalRx: number; totalTx: number }): {
   rxRate: number  // bytes per second
   txRate: number  // bytes per second
@@ -214,11 +207,7 @@ async function getVpnConnections(): Promise<VpnConnection[]> {
     })
     
     if (!output.trim()) {
-<<<<<<< HEAD
       return await getConnectionsFromDatabase()
-=======
-      return []
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     }
     
     // Parse swanctl output
@@ -268,11 +257,7 @@ async function getVpnConnections(): Promise<VpnConnection[]> {
       connections.push(currentConn as VpnConnection)
     }
     
-<<<<<<< HEAD
     return connections.length > 0 ? connections : await getConnectionsFromDatabase()
-=======
-    return connections
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   } catch {
     // swanctl not available, try database
     return await getConnectionsFromDatabase()
@@ -282,11 +267,7 @@ async function getVpnConnections(): Promise<VpnConnection[]> {
 async function getConnectionsFromDatabase(): Promise<VpnConnection[]> {
   try {
     const sessions = await db.vpnSession.findMany({
-<<<<<<< HEAD
       where: { endedAt: null },
-=======
-      where: { status: 'ACTIVE' },
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       orderBy: { connectedAt: 'desc' },
       take: 50,
     })
@@ -294,19 +275,11 @@ async function getConnectionsFromDatabase(): Promise<VpnConnection[]> {
     return sessions.map((s) => ({
       name: s.username,
       username: s.username,
-<<<<<<< HEAD
       sourceIp: s.clientIp || '',
       destIp: '',
       bytesIn: s.bytesIn || 0,
       bytesOut: s.bytesOut || 0,
       connectedSince: s.connectedAt?.toISOString() || '',
-=======
-      sourceIp: s.sourceIp,
-      destIp: s.destIp || '',
-      bytesIn: s.bytesIn,
-      bytesOut: s.bytesOut,
-      connectedSince: s.connectedAt.toISOString(),
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       status: 'ACTIVE',
     }))
   } catch {
@@ -317,11 +290,7 @@ async function getConnectionsFromDatabase(): Promise<VpnConnection[]> {
 async function getConnectionHistory() {
   try {
     const total = await db.vpnSession.count()
-<<<<<<< HEAD
     const active = await db.vpnSession.count({ where: { endedAt: null } })
-=======
-    const active = await db.vpnSession.count({ where: { status: 'ACTIVE' } })
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     

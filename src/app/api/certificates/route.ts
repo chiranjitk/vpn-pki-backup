@@ -271,21 +271,17 @@ export async function POST(request: NextRequest) {
     ensurePKIDirectories()
     ensureStrongSwanDirs()
 
-<<<<<<< HEAD
     // Get PKI paths for client certificate storage
     // IMPORTANT: Client certificates go in /var/lib/vpn-pki/, NOT in /etc/swanctl/
     // /etc/swanctl/x509/ is for SERVER certificates only
     // /etc/swanctl/private/ is for SERVER keys only
     const pkiPaths = getPKIPaths()
 
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
     // Common Name - use fullName or username (NOT email)
     const commonName = user.fullName || user.username
 
     // Generate unique filename using username and timestamp
     const certName = `${user.username}_${Date.now()}`
-<<<<<<< HEAD
     
     // Store client certificates in separate directory for distribution
     // NOT in /etc/swanctl/ which is for server certificates only!
@@ -296,20 +292,6 @@ export async function POST(request: NextRequest) {
     console.log(`[PKI] Generating client certificate for: ${commonName}`)
     console.log(`[PKI] Using CA: ${ca.name} (${ca.subject})`)
     console.log(`[PKI] Client cert will be stored in: ${pkiPaths.clientCertsPath}`)
-=======
-    const keyPath = path.join(STRONGSWAN_PATHS.privateDir, `${certName}.key`)
-    const certPath = path.join(STRONGSWAN_PATHS.x509Dir, `${certName}.pem`)
-    const pfxPath = path.join(STRONGSWAN_PATHS.swanctlDir, 'pkcs12', `${certName}.p12`)
-
-    // Ensure pkcs12 directory exists
-    const pkcs12Dir = path.join(STRONGSWAN_PATHS.swanctlDir, 'pkcs12')
-    if (!fs.existsSync(pkcs12Dir)) {
-      fs.mkdirSync(pkcs12Dir, { recursive: true, mode: 0o755 })
-    }
-
-    console.log(`[PKI] Generating client certificate for: ${commonName}`)
-    console.log(`[PKI] Using CA: ${ca.name} (${ca.subject})`)
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 
     // Step 1: Generate private key using pki tool
     console.log('[PKI] Step 1: Generating private key...')

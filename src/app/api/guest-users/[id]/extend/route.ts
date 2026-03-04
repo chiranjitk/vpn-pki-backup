@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-<<<<<<< HEAD
 import { GuestStatus } from '@prisma/client'
 
 // POST /api/guest-users/[id]/extend - Extend guest user access period
-=======
-
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -14,7 +10,6 @@ export async function POST(
   try {
     const { id } = await params
     const body = await request.json()
-<<<<<<< HEAD
 
     // Check if guest user exists
     const existingGuest = await db.guestUser.findUnique({
@@ -200,25 +195,5 @@ export async function POST(
       { success: false, error: 'Failed to extend guest access', message: error.message },
       { status: 500 }
     )
-=======
-    const { extendDays = 7 } = body
-    
-    const guest = await db.guestUser.findUnique({ where: { id } })
-    if (!guest) {
-      return NextResponse.json({ error: 'Guest user not found' }, { status: 404 })
-    }
-    
-    const newEndDate = new Date(guest.accessEndDate)
-    newEndDate.setDate(newEndDate.getDate() + extendDays)
-    
-    const updated = await db.guestUser.update({
-      where: { id },
-      data: { accessEndDate: newEndDate }
-    })
-    
-    return NextResponse.json({ success: true, guest: updated })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to extend access' }, { status: 500 })
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   }
 }

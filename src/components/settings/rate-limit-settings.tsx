@@ -14,11 +14,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import {
-<<<<<<< HEAD
   Shield, Save, RefreshCw, AlertTriangle, Clock,
-=======
-  Shield, Save, RefreshCw, AlertTriangle, CheckCircle2, Clock,
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -36,14 +32,6 @@ interface RateLimitSettings {
   vpn: RateLimitConfig
 }
 
-<<<<<<< HEAD
-=======
-interface RateLimitStatus {
-  enabled: boolean
-  settings: RateLimitSettings
-}
-
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 // Default values
 const DEFAULT_SETTINGS: RateLimitSettings = {
   login: { windowMs: 60000, maxRequests: 5, message: 'Too many login attempts. Please try again later.' },
@@ -107,19 +95,11 @@ export function RateLimitSettings() {
     toast.info('Settings reset to defaults')
   }
 
-<<<<<<< HEAD
   const updateCategory = (category: keyof RateLimitSettings, field: string, value: number) => {
     setSettings(prev => ({
       ...prev,
       [category]: {
         ...prev[category],
-=======
-  const updateCategory = (category: keyof RateLimitConfig, field: string, value: number) => {
-    setSettings(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category as keyof RateLimitSettings],
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
         [field]: value,
       },
     }))

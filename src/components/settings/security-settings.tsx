@@ -2,20 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import {
-<<<<<<< HEAD
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-=======
-  Card, CardContent, CardDescription, CardHeader, CardTitle,
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-<<<<<<< HEAD
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -41,20 +36,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Image from 'next/image'
-=======
-import { Switch } from '@/components/ui/switch'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Separator } from '@/components/ui/separator'
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  Shield, KeyRound, AlertTriangle, CheckCircle2, Smartphone, QrCode, Loader2, Fingerprint, Activity, Search, Server,
-} from 'lucide-react'
-import { toast } from 'sonner'
-import Image from 'next/image'
-import { getAuthToken } from '@/lib/auth-helpers'
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 
 interface TwoFactorStatus {
   twoFactorEnabled: boolean
@@ -62,7 +43,6 @@ interface TwoFactorStatus {
   email: string
 }
 
-<<<<<<< HEAD
 interface OcspConfig {
   isEnabled: boolean
   responderUrl: string
@@ -73,8 +53,6 @@ interface OcspConfig {
   caCertPath: string
 }
 
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 interface OcspStatus {
   isRunning: boolean
   totalRequests: number
@@ -84,10 +62,7 @@ interface OcspStatus {
 }
 
 export function SecuritySettings() {
-<<<<<<< HEAD
   // 2FA State
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   const [twoFactorStatus, setTwoFactorStatus] = useState<TwoFactorStatus | null>(null)
   const [loadingStatus, setLoadingStatus] = useState(true)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
@@ -100,7 +75,6 @@ export function SecuritySettings() {
   const [disableLoading, setDisableLoading] = useState(false)
   const [disableCode, setDisableCode] = useState('')
 
-<<<<<<< HEAD
   // OCSP State
   const [ocspConfig, setOcspConfig] = useState<OcspConfig>({
     isEnabled: true,
@@ -114,17 +88,12 @@ export function SecuritySettings() {
   const [ocspStatus, setOcspStatus] = useState<OcspStatus | null>(null)
   const [loadingOcsp, setLoadingOcsp] = useState(true)
   const [savingOcsp, setSavingOcsp] = useState(false)
-=======
-  const [ocspStatus, setOcspStatus] = useState<OcspStatus | null>(null)
-  const [loadingOcsp, setLoadingOcsp] = useState(true)
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   const [checkSerial, setCheckSerial] = useState('')
   const [checkingCert, setCheckingCert] = useState(false)
   const [certStatus, setCertStatus] = useState<{ status: string; serialNumber: string } | null>(null)
 
   useEffect(() => {
     fetchTwoFactorStatus()
-<<<<<<< HEAD
     fetchOcspConfig()
     fetchOcspStatus()
   }, [])
@@ -135,24 +104,14 @@ export function SecuritySettings() {
     }
     return ''
   }
-=======
-    fetchOcspStatus()
-  }, [])
-
-  const getToken = getAuthToken
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 
   const fetchTwoFactorStatus = async () => {
     setLoadingStatus(true)
     try {
       const response = await fetch('/api/auth/2fa/status', {
-<<<<<<< HEAD
         headers: {
           Authorization: `Bearer ${getToken()}`,
         },
-=======
-        headers: { Authorization: `Bearer ${getToken()}` },
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       })
       if (response.ok) {
         const data = await response.json()
@@ -165,7 +124,6 @@ export function SecuritySettings() {
     }
   }
 
-<<<<<<< HEAD
   const fetchOcspConfig = async () => {
     try {
       const response = await fetch('/api/ocsp')
@@ -180,8 +138,6 @@ export function SecuritySettings() {
     }
   }
 
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   const fetchOcspStatus = async () => {
     setLoadingOcsp(true)
     try {
@@ -202,13 +158,9 @@ export function SecuritySettings() {
     try {
       const response = await fetch('/api/auth/2fa/setup', {
         method: 'POST',
-<<<<<<< HEAD
         headers: {
           Authorization: `Bearer ${getToken()}`,
         },
-=======
-        headers: { Authorization: `Bearer ${getToken()}` },
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
       })
       if (response.ok) {
         const data = await response.json()
@@ -290,7 +242,6 @@ export function SecuritySettings() {
     }
   }
 
-<<<<<<< HEAD
   const handleSaveOcsp = async () => {
     setSavingOcsp(true)
     try {
@@ -312,8 +263,6 @@ export function SecuritySettings() {
     }
   }
 
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   const handleCheckCertificate = async () => {
     if (!checkSerial) {
       toast.error('Please enter a serial number')
@@ -389,11 +338,7 @@ export function SecuritySettings() {
                 <AlertTitle>How it works</AlertTitle>
                 <AlertDescription>
                   When enabled, you&apos;ll need to enter a code from your authenticator app 
-<<<<<<< HEAD
                   (like Google Authenticator or Authy) in addition to your password when logging in.
-=======
-                  in addition to your password when logging in.
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                 </AlertDescription>
               </Alert>
 
@@ -437,10 +382,7 @@ export function SecuritySettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-<<<<<<< HEAD
           {/* OCSP Status */}
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label className="text-base">OCSP Responder Status</Label>
@@ -485,7 +427,6 @@ export function SecuritySettings() {
 
           <Separator />
 
-<<<<<<< HEAD
           {/* OCSP Configuration */}
           <div className="space-y-4">
             <h4 className="font-medium">Configuration</h4>
@@ -563,8 +504,6 @@ export function SecuritySettings() {
           <Separator />
 
           {/* Certificate Status Check */}
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
           <div className="space-y-4">
             <h4 className="font-medium">Check Certificate Status</h4>
             <div className="flex gap-2">
@@ -590,17 +529,12 @@ export function SecuritySettings() {
                 ) : (
                   <AlertTriangle className="h-4 w-4" />
                 )}
-<<<<<<< HEAD
                 <AlertTitle>
                   Certificate Status: {certStatus.status}
                 </AlertTitle>
                 <AlertDescription>
                   Serial: {certStatus.serialNumber}
                 </AlertDescription>
-=======
-                <AlertTitle>Certificate Status: {certStatus.status}</AlertTitle>
-                <AlertDescription>Serial: {certStatus.serialNumber}</AlertDescription>
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
               </Alert>
             )}
           </div>
@@ -622,7 +556,6 @@ export function SecuritySettings() {
           <div className="space-y-4">
             {qrCode && (
               <div className="flex justify-center">
-<<<<<<< HEAD
                 <Image
                   src={qrCode}
                   alt="2FA QR Code"
@@ -630,9 +563,6 @@ export function SecuritySettings() {
                   height={200}
                   className="border rounded-lg"
                 />
-=======
-                <Image src={qrCode} alt="2FA QR Code" width={200} height={200} className="border rounded-lg" />
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
               </div>
             )}
             {secret && (
@@ -654,26 +584,18 @@ export function SecuritySettings() {
             </div>
           </div>
           <DialogFooter>
-<<<<<<< HEAD
             <Button variant="outline" onClick={() => setShowSetupDialog(false)}>
               Cancel
             </Button>
-=======
-            <Button variant="outline" onClick={() => setShowSetupDialog(false)}>Cancel</Button>
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             <Button onClick={handleVerify2FA} disabled={verifyLoading || verifyCode.length !== 6}>
               {verifyLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Verifying...
                 </>
-<<<<<<< HEAD
               ) : (
                 'Verify & Enable'
               )}
-=======
-              ) : 'Verify & Enable'}
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -696,11 +618,7 @@ export function SecuritySettings() {
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Warning</AlertTitle>
               <AlertDescription>
-<<<<<<< HEAD
                 Disabling 2FA reduces your account security. You will no longer need a verification code to sign in.
-=======
-                Disabling 2FA reduces your account security.
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
               </AlertDescription>
             </Alert>
             <div className="space-y-2">
@@ -716,26 +634,18 @@ export function SecuritySettings() {
             </div>
           </div>
           <DialogFooter>
-<<<<<<< HEAD
             <Button variant="outline" onClick={() => setShowDisableDialog(false)}>
               Cancel
             </Button>
-=======
-            <Button variant="outline" onClick={() => setShowDisableDialog(false)}>Cancel</Button>
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             <Button variant="destructive" onClick={handleDisable2FA} disabled={disableLoading || disableCode.length !== 6}>
               {disableLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Disabling...
                 </>
-<<<<<<< HEAD
               ) : (
                 'Disable 2FA'
               )}
-=======
-              ) : 'Disable 2FA'}
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
             </Button>
           </DialogFooter>
         </DialogContent>

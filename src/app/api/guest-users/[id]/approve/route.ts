@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-<<<<<<< HEAD
 import { GuestStatus } from '@prisma/client'
 
 // POST /api/guest-users/[id]/approve - Approve a guest user
-=======
-
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
-<<<<<<< HEAD
     const body = await request.json().catch(() => ({}))
 
     // Check if guest user exists
@@ -124,18 +119,5 @@ export async function POST(
       { success: false, error: 'Failed to approve guest user', message: error.message },
       { status: 500 }
     )
-=======
-    const guest = await db.guestUser.update({
-      where: { id },
-      data: {
-        status: 'APPROVED',
-        approvalDate: new Date(),
-        approvedBy: 'admin', // In production, get from auth
-      }
-    })
-    return NextResponse.json({ success: true, guest })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to approve guest user' }, { status: 500 })
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
   }
 }

@@ -31,7 +31,6 @@ interface VpnStatus {
 }
 
 interface Connection {
-<<<<<<< HEAD
   id: string
   name: string
   user: string
@@ -46,15 +45,6 @@ interface Connection {
   bytesOut?: number
   ikeProposal?: string
   espProposal?: string
-=======
-  name: string
-  localId: string
-  remoteId: string
-  localAddr: string
-  remoteAddr: string
-  state: string
-  established: number
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 }
 
 function formatUptime(seconds: number): string {
@@ -62,7 +52,6 @@ function formatUptime(seconds: number): string {
   const days = Math.floor(seconds / 86400)
   const hours = Math.floor((seconds % 86400) / 3600)
   const mins = Math.floor((seconds % 3600) / 60)
-<<<<<<< HEAD
   const secs = Math.floor(seconds % 60)
   if (days > 0) return `${days}d ${hours}h ${mins}m`
   if (hours > 0) return `${hours}h ${mins}m ${secs}s`
@@ -86,9 +75,6 @@ function formatBytes(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
-=======
-  return `${days}d ${hours}h ${mins}m`
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 }
 
 export function VPNContent() {
@@ -347,7 +333,6 @@ export function VPNContent() {
                 <tbody>
                   {connections.map((conn, i) => (
                     <tr key={i} className="border-b">
-<<<<<<< HEAD
                       <td className="p-3 text-sm font-medium">
                         <div>
                           <div>{conn.user || 'Unknown'}</div>
@@ -372,22 +357,13 @@ export function VPNContent() {
                         <Badge variant={conn.state === 'ESTABLISHED' ? 'default' : 'secondary'}>
                           {conn.state}
                         </Badge>
-=======
-                      <td className="p-3 text-sm font-medium">{conn.name || conn.remoteId}</td>
-                      <td className="p-3 text-sm font-mono">{conn.remoteAddr}</td>
-                      <td className="p-3">
-                        <Badge variant="default">{conn.state}</Badge>
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                       </td>
                       <td className="p-3 text-right">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleTerminateConnection(conn.name)}
-<<<<<<< HEAD
                           title="Terminate connection"
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
                         >
                           <XCircle className="h-4 w-4" />
                         </Button>
