@@ -1377,7 +1377,6 @@ Update the PKI Content component to add CSR generation dialog, improve MODE A ex
 
 ---
 
-<<<<<<< HEAD
 
 ---
 ## Task ID: guest-users-api
@@ -3300,5 +3299,455 @@ Updated:
 - src/components/nat/nat-policies-content.tsx (interface fetching)
 - src/components/layout/app-sidebar.tsx (navigation link)
 ```
-=======
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
+
+---
+
+## Task ID: Phase 2
+Agent: Site-to-Site VPN Developer
+Task: Implement Site-to-Site VPN Foundation
+
+### Work Task
+Create comprehensive site-to-site VPN functionality including remote gateway management, network-to-network tunnels, and tunnel monitoring.
+
+### Work Summary
+
+#### Database Schema Updates:
+
+Added to **prisma/schema.prisma**:
+
+1. **RemoteGateway Model**
+   - Gateway identity: peerIp, peerId, peerHostname
+   - Authentication: PSK, Certificate-based
+   - Connection settings: IKE version, proposals, DPD
+   - NAT traversal settings
+   - Status tracking and metadata
+
+2. **SiteToSiteTunnel Model**
+   - Gateway reference
+   - Network configuration: localSubnets, remoteSubnets
+   - Traffic selectors
+   - Tunnel mode (TUNNEL, TRANSPORT, POLICY)
+   - Security: PFS, rekeying, life time
+   - Deployment status and statistics
+
+3. **TunnelMonitoring Model**
+   - Real-time metrics: latency, throughput, bytes/packets
+   - Connection quality: packet loss, connection score
+   - SA information: IKE/Child SA state, SPI
+   - Rekey tracking
+
+4. **Aggregated Models**
+   - TunnelMonitoringHourly
+   - TunnelMonitoringDaily
+
+5. **Enums**
+   - SiteToSiteAuthMethod (PSK, CERTIFICATE, EAP)
+   - PskType (RAW, HEX, BASE64)
+   - GatewayStatus (UP, DOWN, UNKNOWN, ERROR, INITIALIZING)
+   - TunnelStatus (UP, DOWN, INITIALIZING, REKEYING, ERROR, DISABLED)
+   - TunnelMode (TUNNEL, TRANSPORT, POLICY)
+   - EncapType (NO, YES, AUTO)
+
+#### Files Created:
+
+1. **src/lib/vpn/site-to-site.ts** (Site-to-Site VPN Library)
+   - Gateway CRUD operations
+   - Tunnel CRUD operations
+   - swanctl.conf configuration generation
+   - Monitoring data recording and retrieval
+   - Statistics aggregation
+   - Validation functions
+   - PSK generation
+
+2. **src/app/api/vpn/site-to-site/gateways/route.ts** (Gateway API)
+   - GET: List all gateways or get single gateway
+   - POST: Create gateway or generate PSK
+   - PUT: Update gateway
+   - DELETE: Delete gateway
+   - Audit logging for all operations
+
+3. **src/app/api/vpn/site-to-site/tunnels/route.ts** (Tunnel API)
+   - GET: List tunnels, get single tunnel, preview config
+   - POST: Create tunnel or apply configuration
+   - PUT: Update tunnel
+   - DELETE: Delete tunnel
+   - Config preview generation
+
+4. **src/app/api/vpn/site-to-site/monitoring/route.ts** (Monitoring API)
+   - GET: Get monitoring overview, tunnel-specific data
+   - POST: Record monitoring data (for external collectors)
+   - PUT: Simulate monitoring data (for demo/testing)
+   - Real-time stats calculation
+
+5. **src/components/site-to-site/site-to-site-content.tsx** (Frontend Component)
+   - Tabbed interface: Overview, Gateways, Tunnels, Monitoring
+   - Gateway management dialog with full configuration
+   - Tunnel management dialog with network settings
+   - Config preview modal
+   - Delete confirmation dialogs
+   - Status badges and metrics display
+   - Simulated monitoring for demo purposes
+
+6. **src/app/vpn/site-to-site/page.tsx** (Page Route)
+   - AppLayout wrapper
+   - SiteToSiteContent component
+
+#### Key Features:
+
+1. **Remote Gateway Management**
+   - PSK and certificate authentication support
+   - IKEv1/v2 support
+   - DPD configuration
+   - NAT traversal settings
+   - Contact and location metadata
+
+2. **Network-to-Network Tunnels**
+   - Multiple subnet support (comma-separated CIDRs)
+   - Traffic selector configuration
+   - Rekeying and lifetime settings
+   - Start action (none, start, trap)
+   - MOBIKE support
+
+3. **Configuration Generation**
+   - swanctl.conf format for strongSwan 6.0.1
+   - Connection and secrets blocks
+   - PSK secret generation
+   - Traffic selector handling
+
+4. **Tunnel Monitoring**
+   - Real-time latency measurement
+   - Throughput tracking (bytes/packets in/out)
+   - Connection quality scoring (0-100)
+   - Packet loss percentage
+   - SA state monitoring
+   - Hourly and daily aggregation
+
+5. **UI Features**
+   - Dashboard overview with statistics cards
+   - Gateway and tunnel tables with actions
+   - Configuration preview modal
+   - Status badges (UP, DOWN, ERROR, etc.)
+   - Traffic formatting (bytes to KB/MB/GB)
+
+#### Navigation Integration:
+Added "Site-to-Site VPN" to VPN section in sidebar navigation at `/vpn/site-to-site`.
+
+#### Audit Logging:
+All operations logged with:
+- CREATE_REMOTE_GATEWAY
+- UPDATE_REMOTE_GATEWAY
+- DELETE_REMOTE_GATEWAY
+- CREATE_SITE_TO_SITE_TUNNEL
+- UPDATE_SITE_TO_SITE_TUNNEL
+- DELETE_SITE_TO_SITE_TUNNEL
+- APPLY_SITE_TO_SITE_TUNNEL
+
+---
+
+---
+
+## Task ID: Maintenance-001
+Agent: Documentation & Maintenance
+Task: Create Backup and Comprehensive Development Documentation
+
+### Work Task
+Create project backup and comprehensive documentation for future development, bug fixes, enhancements, and maintenance.
+
+### Work Summary
+
+#### Backup Created:
+- **File:** `backups/backup_20260306_021638.tar.gz`
+- **Contents:** Source code, prisma schema, mini-services, documentation, scripts, configuration files
+- **Excludes:** node_modules, .next, existing backups, temporary files
+
+#### Documentation Created:
+
+1. **docs/developer/DEVELOPMENT_GUIDE.md** (Development Guidelines)
+   - Complete development environment setup
+   - Project architecture overview
+   - Coding standards and conventions
+   - API development patterns
+   - Frontend development guide
+   - Database operations with Prisma
+   - Mini-services development
+   - Testing & QA guidelines
+   - Deployment procedures
+   - Security best practices
+
+2. **docs/developer/TROUBLESHOOTING.md** (Bug Fix & Troubleshooting)
+   - Common issues and solutions
+   - Authentication problem resolution
+   - Certificate troubleshooting
+   - VPN connection debugging
+   - Database issue resolution
+   - Service error handling
+   - Performance optimization
+   - Logging and debugging techniques
+   - Error code reference
+   - Recovery procedures
+
+3. **docs/product/ROADMAP.md** (Feature Enhancement Roadmap)
+   - Current version status (v1.0.0)
+   - Short-term roadmap (Phase 3):
+     - High Availability
+     - Multi-tenancy Support
+     - Advanced Traffic Shaping
+     - Full IPv6 Support
+     - Mobile Device Management Integration
+   - Long-term roadmap (Phase 4):
+     - Cloud Deployment Templates
+     - Container/Kubernetes Support
+     - AI-Powered Anomaly Detection
+     - Custom Branding/White-label
+     - SAML SSO Integration
+     - OAuth 2.0 / OpenID Connect
+     - Advanced Reporting Dashboard
+   - Feature request process
+   - Implementation priorities
+   - Technical debt tracking
+   - Known limitations
+   - Deprecation plans
+
+4. **Updated docs/INDEX.md**
+   - Added DEVELOPMENT_GUIDE.md reference
+   - Added TROUBLESHOOTING.md reference
+   - Added ROADMAP.md reference
+   - Reorganized documentation structure
+
+### Stage Summary:
+- Complete project backup created
+- Comprehensive development documentation for future developers
+- Bug fix and troubleshooting guide for maintenance
+- Feature roadmap for planned enhancements
+- Documentation index updated
+
+### Important Notes for Future Development:
+1. **Backup Location:** `/home/z/my-project/backups/`
+2. **Documentation Location:** `/home/z/my-project/docs/`
+3. **Worklog Location:** `/home/z/my-project/worklog.md`
+4. **Mini-services Ports:**
+   - CRL Scheduler: 3031
+   - Certificate Renewal: 3032
+   - OCSP Responder: 3033
+5. **Key Commands:**
+   - `bun run dev` - Start development
+   - `bun run lint` - Check code quality
+   - `bun run db:push` - Push schema changes
+   - `bun run db:generate` - Generate Prisma client
+
+---
+
+---
+
+## Task ID: 3
+Agent: Bulk Import/Export Developer
+Task: Implement Bulk Import/Export Functionality for VPN PKI Management Platform
+
+### Work Task
+Create bulk import/export functionality for VPN users and certificates with CSV file support, validation, preview, and progress tracking.
+
+### Work Summary
+
+#### Files Created:
+
+**API Routes:**
+
+1. **src/app/api/bulk/import-users/route.ts** (Import Users API)
+   - POST: Import VPN users from CSV file
+     - CSV Format: `username,email,fullName,department,phone,status`
+     - Required fields: username, email
+     - Optional fields: fullName, department, phone, status (ACTIVE/DISABLED/SUSPENDED)
+     - Preview mode with validation before import
+     - Duplicate username detection
+     - Email validation
+     - Status validation
+   - GET: Returns CSV format documentation
+
+2. **src/app/api/bulk/export-users/route.ts** (Export Users API)
+   - POST: Export VPN users to CSV
+     - Field selection: username, email, fullName, department, phone, status, certificateStatus, certificateExpiry, createdAt, updatedAt
+     - Filters: status, department, hasCertificate
+     - Returns downloadable CSV file
+   - GET: Returns available fields and filter options
+
+3. **src/app/api/bulk/import-certificates/route.ts** (Import Certificates API)
+   - POST: Import certificate requests from CSV
+     - CSV Format: `username,commonName,keySize,validityDays`
+     - Required fields: username, commonName
+     - Optional fields: keySize (2048/4096), validityDays (1-3650)
+     - Preview mode with validation
+     - Missing user detection
+     - Creates PENDING certificates for generation
+   - GET: Returns CSV format documentation
+
+4. **src/app/api/bulk/export-certificates/route.ts** (Export Certificates API)
+   - POST: Export certificates to CSV
+     - Field selection: username, commonName, serialNumber, status, keySize, issueDate, expiryDate, daysUntilExpiry, certificateType, email, department
+     - Filters: status, certificateType, expiringWithin (7/14/30/60/90 days)
+     - Returns downloadable CSV file
+   - GET: Returns available fields and filter options
+
+5. **src/app/api/bulk/jobs/route.ts** (Bulk Jobs Management API)
+   - GET: List bulk operation jobs with pagination
+     - Filters: type, status
+     - Returns job details with progress, errors, timestamps
+   - POST: Job management actions
+     - `{ action: 'cancel', jobId }` - Cancel running job
+     - `{ action: 'retry', jobId }` - Retry failed job
+     - `{ action: 'download_errors', jobId }` - Download error report CSV
+   - DELETE: Delete completed/failed job records
+
+**Frontend Components:**
+
+6. **src/components/bulk/bulk-import-dialog.tsx** (Import Dialog)
+   - Features:
+     - Drag-and-drop file upload
+     - CSV file validation
+     - Preview mode before import
+     - Validation error display (table format)
+     - Duplicate/missing record warnings
+     - Sample data preview (first 5 rows)
+     - Progress indicator during import
+     - Result summary (success/failed counts)
+     - Error download capability
+     - Template download button
+
+7. **src/components/bulk/bulk-export-dialog.tsx** (Export Dialog)
+   - Features:
+     - Field selection with required fields locked
+     - Select all/Clear all buttons
+     - Filter by status
+     - Filter by department (users)
+     - Filter by certificate status (users)
+     - Filter by certificate type (certificates)
+     - Filter by expiring within days (certificates)
+     - Direct CSV download
+
+8. **src/components/bulk/bulk-job-status.tsx** (Job Status Component)
+   - Features:
+     - Job list with status badges
+     - Progress bar for processing jobs
+     - Success/failed counts
+     - Job details dialog
+     - Cancel running jobs
+     - Delete completed jobs
+     - Download error reports
+     - Auto-refresh for active jobs (30 seconds)
+     - Compact mode for embedding
+
+**Updated Files:**
+
+9. **src/components/users/users-content.tsx** (Users Page Update)
+   - Added Import/Export buttons to page header
+   - Integrated BulkImportDialog component
+   - Integrated BulkExportDialog component
+   - Refreshes user list after import completion
+
+#### Database Integration:
+
+Uses existing `BulkOperation` model from schema:
+```prisma
+model BulkOperation {
+  id              String
+  type            BulkOperationType  // IMPORT_USERS, EXPORT_USERS, etc.
+  status          BulkOperationStatus  // PENDING, PROCESSING, COMPLETED, etc.
+  fileName        String?
+  recordsTotal    Int
+  recordsProcessed Int
+  recordsSuccess  Int
+  recordsFailed   Int
+  resultFile      String?
+  errors          String?  // JSON array
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdBy       String?
+  createdAt       DateTime
+}
+```
+
+#### Key Features Implemented:
+
+1. **CSV Validation**
+   - Header validation (required columns)
+   - Data type validation
+   - Duplicate detection
+   - Missing reference detection (users for certificates)
+   - Status value validation
+
+2. **Preview Mode**
+   - Preview before committing import
+   - Show validation errors by row
+   - Show sample data
+   - Show warning for duplicates/missing
+
+3. **Progress Tracking**
+   - Real-time progress updates
+   - Progress bar visualization
+   - Record counts (total, processed, success, failed)
+
+4. **Error Handling**
+   - Detailed error messages per row
+   - Error download as CSV
+   - First 50 errors shown in dialog
+   - Full error report downloadable
+
+5. **Audit Logging**
+   - BULK_IMPORT_USERS action
+   - BULK_EXPORT_USERS action
+   - BULK_IMPORT_CERTIFICATES action
+   - BULK_EXPORT_CERTIFICATES action
+   - Full details logged including counts and filters
+
+#### API Usage Examples:
+
+```bash
+# Preview user import
+POST /api/bulk/import-users
+FormData: { file: users.csv, preview: 'true' }
+
+# Import users
+POST /api/bulk/import-users
+FormData: { file: users.csv }
+
+# Export users with filters
+POST /api/bulk/export-users
+{
+  "fields": ["username", "email", "fullName", "department", "status"],
+  "status": "ACTIVE",
+  "hasCertificate": true
+}
+
+# List bulk jobs
+GET /api/bulk/jobs?limit=20&status=COMPLETED
+
+# Download error report
+POST /api/bulk/jobs
+{ "action": "download_errors", "jobId": "xxx" }
+```
+
+#### CSV Format Examples:
+
+**Users CSV:**
+```csv
+username,email,fullName,department,phone,status
+johndoe,john@example.com,John Doe,Engineering,+1234567890,ACTIVE
+janedoe,jane@example.com,Jane Doe,Marketing,+1234567891,ACTIVE
+```
+
+**Certificates CSV:**
+```csv
+username,commonName,keySize,validityDays
+johndoe,john@example.com,4096,365
+janedoe,jane@example.com,4096,365
+```
+
+#### Security Considerations:
+
+- File type validation (CSV only)
+- Maximum file size limits
+- Input sanitization
+- Status value whitelist validation
+- Key size value validation
+- Validity days range validation
+
+---

@@ -12,8 +12,6 @@ const nextConfig: NextConfig = {
     'preview-chat-103769d2-08c6-4af9-afc5-2ff454ab4afc.space.z.ai',
     '.space.z.ai',
   ],
-<<<<<<< HEAD
-=======
   images: {
     remotePatterns: [
       {
@@ -24,7 +22,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
->>>>>>> cb3b2e1ec22a345a6b5378050327d37b6f83d124
 };
 
 export default nextConfig;
